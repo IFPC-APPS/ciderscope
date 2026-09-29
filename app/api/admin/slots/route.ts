@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { listSlots } from "../../../../lib/server/slotData";
 import { getSupabaseAdminIfConfigured } from "../../../../lib/server/supabaseAdmin";
 import { createSlotFromSql, hasSlotSqlConfig, listSlotsFromSql } from "../../../../lib/server/slotSql";
-import { requireAdmin } from "../../../../lib/server/adminAuth";
+import { CAPACITES, requireCapacite } from "../../../../lib/server/adminAuth";
 import { parseIsoDate } from "../../../../lib/slots/dates";
 
 export const runtime = "nodejs";
@@ -87,7 +87,7 @@ const createSlotWithSupabase = async (
 };
 
 export async function GET(request: Request) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requireCapacite(CAPACITES.CRENEAUX);
   if (unauthorized) return unauthorized;
 
   try {
@@ -109,7 +109,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requireCapacite(CAPACITES.CRENEAUX);
   if (unauthorized) return unauthorized;
 
   try {

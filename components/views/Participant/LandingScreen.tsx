@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FiCalendar, FiClipboard } from "react-icons/fi";
 import { SessionCard } from "../../features/SessionCard";
 import { SessionListItem } from "../../../types";
@@ -24,6 +24,31 @@ export const LandingScreen = ({ sessions, onSelectSession }: LandingScreenProps)
   const [activePanel, setActivePanel] = useState<ParticipantLandingPanel>("sessions");
   const activeSessions = sessions.filter(s => s.active);
 
+  /**
+   * Le panneau d'inscription n'apparaît que si des créneaux existent.
+   *
+   * Le jury n'est pas authentifié : contrairement à l'espace d'animation, il
+   * n'y a ici aucun rôle sur lequel se fonder. Le critère est donc la réalité
+   * des données — une cidrerie qui invite ses dégustateurs par lien ou QR code
+   * n'ouvre jamais de créneau, et ne verra jamais ce panneau ; un panel
+   * institutionnel en ouvre, et le retrouve.
+   *
+   * L'avantage sur un réglage : rien à configurer, et aucune façon de se
+   * tromper.
+   */
+  const [creneauxDisponibles, setCreneauxDisponibles] = useState(false);
+
+  useEffect(() => {
+    let annule = false;
+    fetch("/api/public/slots", { cache: "no-store" })
+      .then(r => (r.ok ? r.json() : { slots: [] }))
+      .then((d: { slots?: unknown[] }) => {
+        if (!annule) setCreneauxDisponibles(Array.isArray(d.slots) && d.slots.length > 0);
+      })
+      .catch(() => undefined);
+    return () => { annule = true; };
+  }, []);
+
   return (
     <div className="mx-auto max-w-[min(94%,1500px)] px-7 py-12 text-center max-[480px]:px-3.5 max-[480px]:py-6">
       <h1 className="mb-2.5 text-4xl font-extrabold leading-[1.08] tracking-normal text-[var(--ink)] max-[480px]:text-2xl max-[480px]:leading-tight">
@@ -41,16 +66,18 @@ export const LandingScreen = ({ sessions, onSelectSession }: LandingScreenProps)
         >
           <FiClipboard /> Rejoindre une séance
         </button>
-        <button
-          type="button"
-          className={panelButtonClass(activePanel === "slots")}
-          onClick={() => setActivePanel("slots")}
-        >
-          <FiCalendar /> S&apos;inscrire ou annuler un créneau
-        </button>
+        {creneauxDisponibles && (
+          <button
+            type="button"
+            className={panelButtonClass(activePanel === "slots")}
+            onClick={() => setActivePanel("slots")}
+          >
+            <FiCalendar /> S&apos;inscrire ou annuler un créneau
+          </button>
+        )}
       </div>
 
-      {activePanel === "slots" && <SlotSignupView />}
+      {activePanel === "slots" && creneauxDisponibles && <SlotSignupView />}
 
       {activePanel === "sessions" && (
         <>

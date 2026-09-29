@@ -1,7 +1,24 @@
 "use client";
 
-import React, { useState } from "react";
-import { FiChevronRight, FiLock } from "react-icons/fi";
+import React, { useEffect, useState } from "react";
+import { FiChevronRight, FiLock, FiShield } from "react-icons/fi";
+
+/**
+ * Ce que l'utilisateur lit quand PADOC l'a renvoyé sans session.
+ *
+ * Chaque clé correspond à un refus émis par la route de retour. Le détail
+ * technique reste au journal : ici on dit ce qu'il faut faire, pas ce qui
+ * s'est passé.
+ */
+const MOTIFS_PADOC: Record<string, string> = {
+  "sans-role": "Votre compte PADOC est reconnu, mais il n'a pas encore reçu le droit d'animer des séances sur CiderScope. Demandez-le à un administrateur PADOC.",
+  refus: "La connexion a été interrompue. Si votre compte n'a pas accès à CiderScope, un administrateur PADOC doit vous l'accorder.",
+  expire: "La demande de connexion a expiré. Relancez-la.",
+  invalide: "La demande de connexion n'a pas pu être vérifiée. Relancez-la depuis cette page.",
+  incomplet: "Réponse incomplète de PADOC. Relancez la connexion.",
+  indisponible: "La connexion PADOC n'est pas configurée sur cette instance.",
+  echec: "La connexion avec PADOC a échoué. Réessayez, ou utilisez un identifiant.",
+};
 
 interface AdminLoginViewProps {
   onSuccess: () => void;
@@ -12,6 +29,24 @@ export const AdminLoginView = ({ onSuccess }: AdminLoginViewProps) => {
   const [mdp, setMdp] = useState("");
   const [error, setError] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [padocAvailable, setPadocAvailable] = useState(false);
+
+  // Le bouton PADOC n'apparaît que si l'instance est configurée pour :
+  // proposer une connexion qui répondra 503 serait pire que ne rien proposer.
+  useEffect(() => {
+    let annule = false;
+    fetch("/api/admin/session", { cache: "no-store" })
+      .then(r => r.json())
+      .then((d: { padocAvailable?: boolean }) => {
+        if (!annule) setPadocAvailable(Boolean(d.padocAvailable));
+      })
+      .catch(() => undefined);
+    return () => { annule = true; };
+  }, []);
+
+  const motifPadoc = typeof window === "undefined"
+    ? null
+    : new URLSearchParams(window.location.search).get("connexion");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +91,34 @@ export const AdminLoginView = ({ onSuccess }: AdminLoginViewProps) => {
       </div>
 
       <div className="mx-auto mt-10 w-full max-w-sm">
+        {motifPadoc && (
+          <div className="mb-6 rounded-md border border-[color-mix(in_srgb,var(--warn)_30%,transparent)] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] px-4 py-3 text-sm text-[var(--ink)]">
+            {MOTIFS_PADOC[motifPadoc] || MOTIFS_PADOC.echec}
+          </div>
+        )}
+
+        {padocAvailable && (
+          <div className="mb-8">
+            <a
+              href="/api/auth/ifpc/login?returnTo=/"
+              className="group flex w-full items-center justify-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--paper)] px-3 py-2.5 text-sm font-semibold text-[var(--ink)] shadow-sm transition-all hover:border-[var(--primary)] hover:bg-[color-mix(in_srgb,var(--primary)_6%,transparent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] active:scale-[0.98]"
+            >
+              <FiShield className="text-[var(--primary)]" />
+              <span>Se connecter avec PADOC</span>
+              <FiChevronRight className="transition-transform group-hover:translate-x-1" />
+            </a>
+            <p className="mt-2 text-center text-xs text-[var(--mid)]">
+              Votre compte de la plateforme cidricole, sans mot de passe à retenir ici.
+            </p>
+
+            <div className="mt-8 flex items-center gap-3" aria-hidden="true">
+              <span className="h-px flex-1 bg-[var(--border)]" />
+              <span className="text-xs font-medium uppercase tracking-widest text-[var(--mid2)]">ou</span>
+              <span className="h-px flex-1 bg-[var(--border)]" />
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-[var(--ink)]">

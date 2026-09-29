@@ -93,7 +93,7 @@ export default function CiderScope() {
     completion,
     validatedCompletion,
     flushSave,
-    adminAuth, setAdminAuth,
+    adminAuth, setAdminAuth, capacites,
     restored,
   } = useApp();
 
@@ -210,6 +210,7 @@ export default function CiderScope() {
       editSessId={editSessId}
       adminSection={adminSection}
       setAdminSection={setAdminSection}
+      capacites={capacites}
       onNewSession={() => {
         setEditCfg({ name: "", date: new Date().toISOString().slice(0, 10), products: [], questions: [], presMode: "latin" });
         setEditSessId(null);

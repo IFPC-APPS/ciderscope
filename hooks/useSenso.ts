@@ -83,6 +83,10 @@ export const useSenso = () => {
   const [loading, setLoading] = useState(true);
   const [restored, setRestored] = useState(false);
   const [adminAuth, setAdminAuth] = useState(false);
+  // Capacités de la session, telles que le serveur les connaît. Sert à ne pas
+  // montrer des écrans dont les routes refuseraient l'accès ; la décision
+  // elle-même reste côté serveur.
+  const [capacites, setCapacites] = useState<string[]>([]);
   const [online, setOnline] = useState(false);
   const [curSessId, setCurSessId] = useState<string | null>(null);
   const [curSess, setCurSess] = useState<SessionConfig | null>(null);
@@ -213,8 +217,25 @@ export const useSenso = () => {
       const savedAnT = localStorage.getItem("senso_curAnT");
       const savedAdminSection = localStorage.getItem("senso_admin_section");
 
-      // Auth admin locale de session.
+      // Auth admin locale de session. Conservée pour l'affichage immédiat au
+      // rechargement ; la vérité vient du serveur, demandée juste après.
       if (sessionStorage.getItem("admin_auth") === "1") setAdminAuth(true);
+
+      void fetch("/api/admin/session", { cache: "no-store" })
+        .then(r => r.json())
+        .then((d: { authenticated?: boolean; roles?: string[] }) => {
+          if (d.authenticated) {
+            setAdminAuth(true);
+            sessionStorage.setItem("admin_auth", "1");
+            setCapacites(Array.isArray(d.roles) ? d.roles : []);
+          } else {
+            // Session expirée côté serveur : le drapeau local mentait.
+            sessionStorage.removeItem("admin_auth");
+            setAdminAuth(false);
+            setCapacites([]);
+          }
+        })
+        .catch(() => undefined);
 
       if (isStoredChoice(savedMode, APP_MODES)) setMode(savedMode);
       if (isStoredChoice(savedScreen, APP_SCREENS)) setScreen(savedScreen);
@@ -888,7 +909,7 @@ export const useSenso = () => {
   // ce qui est attendu — les consommateurs qui n'ont pas besoin de l'état peuvent
   // s'abonner uniquement à `actions`.
   const state = useMemo(() => ({
-    mode, screen, sessions, loading, restored, adminAuth, online,
+    mode, screen, sessions, loading, restored, adminAuth, capacites, online,
     curSessId, curSess,
     jurors, cj, ja, cs,
     poste, takenPostes,
@@ -897,7 +918,7 @@ export const useSenso = () => {
     adminSection, saveStatus, pendingCount,
     currentSteps, completion, validatedCompletion,
   }), [
-    mode, screen, sessions, loading, restored, adminAuth, online,
+    mode, screen, sessions, loading, restored, adminAuth, capacites, online,
     curSessId, curSess,
     jurors, cj, ja, cs,
     poste, takenPostes,

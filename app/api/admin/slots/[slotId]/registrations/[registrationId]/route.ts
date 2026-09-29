@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "../../../../../../../lib/server/adminAuth";
+import { CAPACITES, requireCapacite } from "../../../../../../../lib/server/adminAuth";
 import { getSupabaseAdminIfConfigured } from "../../../../../../../lib/server/supabaseAdmin";
 import { cancelSlotRegistrationWithInvitations } from "../../../../../../../lib/server/slotCancellation";
 
@@ -11,7 +11,7 @@ export async function DELETE(
   _request: Request,
   context: { params: Promise<{ slotId: string; registrationId: string }> }
 ) {
-  const unauthorized = await requireAdmin();
+  const unauthorized = await requireCapacite(CAPACITES.CRENEAUX);
   if (unauthorized) return unauthorized;
 
   try {

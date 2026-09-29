@@ -106,6 +106,15 @@ interface AdminViewProps {
   editSessId: string | null;
   adminSection: "seances" | "creneaux" | "analyse";
   setAdminSection: (v: "seances" | "creneaux" | "analyse") => void;
+  /**
+   * Capacités de la session, reçues de PADOC.
+   *
+   * La planification par créneaux et les invitations Outlook servent au panel
+   * institutionnel ; un cidrier qui organise sa propre dégustation n'en a pas
+   * l'usage et ne les reçoit pas. Masquer n'est qu'un confort : les routes
+   * correspondantes exigent la capacité de leur côté.
+   */
+  capacites?: string[];
   onNewSession: () => void;
   onEditSession: (id: string) => void;
   onToggleResultsVisible: (id: string) => void;
@@ -133,12 +142,15 @@ interface AdminViewProps {
 
 export const AdminView = ({
   screen, sessions, editCfg, curEditTab, editSessId,
-  adminSection, setAdminSection,
+  adminSection, setAdminSection, capacites,
   onNewSession, onEditSession, onToggleResultsVisible, onDuplicateSession, onDeleteSession,
   onSetEditCfg, onSetEditTab, onSaveEdit, onSessionSaved, onRefreshSessions, saveNotice, onDismissSaveNotice, onGoBack, downloadCSV,
   listJurorsForSession, deleteJury,
   allAnswers, anSessId, anCfg, curAnT, onAnSessChange, onAnTabChange,
 }: AdminViewProps) => {
+  // Absence de capacités = session d'avant cette évolution, ou mot de passe
+  // partagé : on n'enlève rien à une installation en service.
+  const peutCreneaux = !capacites || capacites.includes("creneaux");
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [skipSlotCreation, setSkipSlotCreation] = useState(false);
   const [selectedSlotDates, setSelectedSlotDates] = useState<Set<string>>(() => new Set());
@@ -278,6 +290,16 @@ export const AdminView = ({
 
   const handleSaveWithSlots = async () => {
     setSlotMessage(null);
+
+    // Sans la capacité « creneaux », la carte n'est pas affichée : exiger une
+    // date bloquerait l'enregistrement sur un champ que l'animateur ne voit
+    // pas. On enregistre la séance, sans planification.
+    if (!peutCreneaux) {
+      const resultat = await onSaveEdit();
+      if (resultat?.success) onSessionSaved(resultat);
+      return;
+    }
+
     if (!editSessId && !skipSlotCreation && pendingSlotDates.length === 0) {
       setSlotMessage({ kind: "error", text: "Choisissez au moins une date valide pour créer un créneau, ou cochez \"Ne pas assigner de créneau\"." });
       return;
@@ -324,13 +346,15 @@ export const AdminView = ({
           >
             <FiList /> Séances
           </Button>
-          <Button
-            size="sm"
-            variant={adminSection === "creneaux" ? "ok" : "secondary"}
-            onClick={() => setAdminSection("creneaux")}
-          >
-            <FiCalendar /> Créneaux
-          </Button>
+          {peutCreneaux && (
+            <Button
+              size="sm"
+              variant={adminSection === "creneaux" ? "ok" : "secondary"}
+              onClick={() => setAdminSection("creneaux")}
+            >
+              <FiCalendar /> Créneaux
+            </Button>
+          )}
           <Button
             size="sm"
             variant={adminSection === "analyse" ? "ok" : "secondary"}
@@ -354,7 +378,7 @@ export const AdminView = ({
           />
         )}
 
-        {adminSection === "creneaux" && (
+        {adminSection === "creneaux" && peutCreneaux && (
           <SlotAdminView sessions={sessions} />
         )}
 
@@ -517,105 +541,107 @@ export const AdminView = ({
                 </div>
               </Card>
 
-              <Card title="Créneau">
-                <div className="grid gap-3 p-[15px]">
-                  <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--paper2)] px-3 py-2 text-sm font-semibold">
-                    <input
-                      type="checkbox"
-                      checked={skipSlotCreation}
-                      onChange={(event) => setSkipSlotCreation(event.target.checked)}
-                    />
-                    Ne pas assigner de créneau
-                  </label>
+              {peutCreneaux && (
+                <Card title="Créneau">
+                  <div className="grid gap-3 p-[15px]">
+                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--paper2)] px-3 py-2 text-sm font-semibold">
+                      <input
+                        type="checkbox"
+                        checked={skipSlotCreation}
+                        onChange={(event) => setSkipSlotCreation(event.target.checked)}
+                      />
+                      Ne pas assigner de créneau
+                    </label>
 
-                  {!skipSlotCreation && (
-                    <div className="grid gap-3 rounded-lg border border-[var(--border)] bg-[var(--paper2)] p-3">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--paper)] text-[var(--mid)] hover:border-[var(--border-strong)] hover:text-[var(--ink)]"
-                          onClick={() => moveSlotWeek(-1)}
-                          aria-label="Semaine precedente"
-                          title="Semaine precedente"
-                        >
-                          <FiChevronLeft />
-                        </button>
-                        <div className="flex-1 text-center text-sm font-extrabold text-[var(--ink)]">
-                          Semaine du {weekLabel(slotWeekStart)}
+                    {!skipSlotCreation && (
+                      <div className="grid gap-3 rounded-lg border border-[var(--border)] bg-[var(--paper2)] p-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--paper)] text-[var(--mid)] hover:border-[var(--border-strong)] hover:text-[var(--ink)]"
+                            onClick={() => moveSlotWeek(-1)}
+                            aria-label="Semaine precedente"
+                            title="Semaine precedente"
+                          >
+                            <FiChevronLeft />
+                          </button>
+                          <div className="flex-1 text-center text-sm font-extrabold text-[var(--ink)]">
+                            Semaine du {weekLabel(slotWeekStart)}
+                          </div>
+                          <button
+                            type="button"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--paper)] text-[var(--mid)] hover:border-[var(--border-strong)] hover:text-[var(--ink)]"
+                            onClick={() => moveSlotWeek(1)}
+                            aria-label="Semaine suivante"
+                            title="Semaine suivante"
+                          >
+                            <FiChevronRight />
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--paper)] text-[var(--mid)] hover:border-[var(--border-strong)] hover:text-[var(--ink)]"
-                          onClick={() => moveSlotWeek(1)}
-                          aria-label="Semaine suivante"
-                          title="Semaine suivante"
-                        >
-                          <FiChevronRight />
-                        </button>
-                      </div>
 
-                      <div className="grid grid-cols-7 gap-1">
-                        {slotWeekDays.map(day => {
-                          const selected = selectedSlotDates.has(day.date);
-                          const existingSlot = existingSlotsByDate.get(day.date);
-                          const isFull = existingSlot ? existingSlot.placesTaken >= existingSlot.capacity : false;
-                          const isAttachedElsewhere = !!existingSlot?.sessionId && existingSlot.sessionId !== editSessId;
-                          const slotMeta = isAttachedElsewhere
-                            ? "occupé"
-                            : existingSlot?.sessionId === editSessId
-                              ? "lié"
-                              : existingSlot
-                                ? `${existingSlot.placesTaken}/${existingSlot.capacity}${existingSlot.waitlistCount > 0 ? ` +${existingSlot.waitlistCount}` : ""}`
-                                : day.month;
-                          return (
-                            <button
-                              key={day.date}
-                              type="button"
-                              onClick={() => toggleSlotDate(day.date)}
-                              className={[
-                                "grid min-h-[58px] rounded-lg border px-1 py-2 text-center transition-colors",
-                                existingSlot && !selected && !isFull ? "border-[rgba(98,141,23,.28)] bg-[rgba(98,141,23,.11)] text-[var(--ink)]" : "",
-                                existingSlot && !selected && isFull ? "border-[rgba(198,40,40,.25)] bg-[rgba(198,40,40,.10)] text-[var(--ink)]" : "",
-                                !existingSlot && !selected ? "border-[var(--border)] bg-[var(--paper)] text-[var(--ink)] hover:border-[var(--border-strong)] hover:bg-[var(--paper)]" : "",
-                                selected ? "border-[var(--primary)] bg-[var(--primary)] text-white shadow-[0_1px_4px_rgba(0,0,0,.12)]" : "",
-                                isAttachedElsewhere && !selected ? "cursor-not-allowed opacity-65" : "",
-                              ].join(" ")}
-                              aria-pressed={selected}
-                              title={isAttachedElsewhere
-                                ? "Créneau déjà rattaché à une autre séance."
+                        <div className="grid grid-cols-7 gap-1">
+                          {slotWeekDays.map(day => {
+                            const selected = selectedSlotDates.has(day.date);
+                            const existingSlot = existingSlotsByDate.get(day.date);
+                            const isFull = existingSlot ? existingSlot.placesTaken >= existingSlot.capacity : false;
+                            const isAttachedElsewhere = !!existingSlot?.sessionId && existingSlot.sessionId !== editSessId;
+                            const slotMeta = isAttachedElsewhere
+                              ? "occupé"
+                              : existingSlot?.sessionId === editSessId
+                                ? "lié"
                                 : existingSlot
-                                  ? "Créneau déjà ouvert : la séance sera rattachée à cette date."
-                                  : undefined}
-                            >
-                              <span className="text-[10px] font-bold uppercase leading-none">{day.weekday}</span>
-                              <span className="mt-1 text-base font-extrabold leading-none">{day.day}</span>
-                              <span className="mt-1 truncate text-[10px] font-semibold uppercase leading-none opacity-75">
-                                {slotMeta}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
+                                  ? `${existingSlot.placesTaken}/${existingSlot.capacity}${existingSlot.waitlistCount > 0 ? ` +${existingSlot.waitlistCount}` : ""}`
+                                  : day.month;
+                            return (
+                              <button
+                                key={day.date}
+                                type="button"
+                                onClick={() => toggleSlotDate(day.date)}
+                                className={[
+                                  "grid min-h-[58px] rounded-lg border px-1 py-2 text-center transition-colors",
+                                  existingSlot && !selected && !isFull ? "border-[rgba(98,141,23,.28)] bg-[rgba(98,141,23,.11)] text-[var(--ink)]" : "",
+                                  existingSlot && !selected && isFull ? "border-[rgba(198,40,40,.25)] bg-[rgba(198,40,40,.10)] text-[var(--ink)]" : "",
+                                  !existingSlot && !selected ? "border-[var(--border)] bg-[var(--paper)] text-[var(--ink)] hover:border-[var(--border-strong)] hover:bg-[var(--paper)]" : "",
+                                  selected ? "border-[var(--primary)] bg-[var(--primary)] text-white shadow-[0_1px_4px_rgba(0,0,0,.12)]" : "",
+                                  isAttachedElsewhere && !selected ? "cursor-not-allowed opacity-65" : "",
+                                ].join(" ")}
+                                aria-pressed={selected}
+                                title={isAttachedElsewhere
+                                  ? "Créneau déjà rattaché à une autre séance."
+                                  : existingSlot
+                                    ? "Créneau déjà ouvert : la séance sera rattachée à cette date."
+                                    : undefined}
+                              >
+                                <span className="text-[10px] font-bold uppercase leading-none">{day.weekday}</span>
+                                <span className="mt-1 text-base font-extrabold leading-none">{day.day}</span>
+                                <span className="mt-1 truncate text-[10px] font-semibold uppercase leading-none opacity-75">
+                                  {slotMeta}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
 
-                      <div className="flex flex-wrap gap-3 text-[12px] text-[var(--mid)]">
-                        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[var(--primary)]" /> créneau ouvert</span>
-                        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[var(--danger)]" /> créneau complet</span>
-                        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[var(--paper3)]" /> sans créneau</span>
+                        <div className="flex flex-wrap gap-3 text-[12px] text-[var(--mid)]">
+                          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[var(--primary)]" /> créneau ouvert</span>
+                          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[var(--danger)]" /> créneau complet</span>
+                          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[var(--paper3)]" /> sans créneau</span>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {slotMessage && (
-                    <div className={`rounded-lg border px-3 py-2 text-sm font-medium ${
-                      slotMessage.kind === "ok"
-                        ? "border-[rgba(98,141,23,.24)] bg-[rgba(98,141,23,.09)] text-[var(--primary)]"
-                        : "border-[rgba(198,40,40,.22)] bg-[rgba(198,40,40,.08)] text-[var(--danger)]"
-                    }`}>
-                      {slotMessage.text}
-                    </div>
-                  )}
-                </div>
-              </Card>
+                    {slotMessage && (
+                      <div className={`rounded-lg border px-3 py-2 text-sm font-medium ${
+                        slotMessage.kind === "ok"
+                          ? "border-[rgba(98,141,23,.24)] bg-[rgba(98,141,23,.09)] text-[var(--primary)]"
+                          : "border-[rgba(198,40,40,.22)] bg-[rgba(198,40,40,.08)] text-[var(--danger)]"
+                      }`}>
+                        {slotMessage.text}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )}
 
               <Card title="Échantillons">
                 <div className="flex flex-col gap-2">
