@@ -14,8 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Synchronisation automatique des désinscriptions Outlook et actualisation des créneaux.
 - Quota silencieux de 20 demandes d'inscription quotidiennes par adresse.
 - Jetons locaux transparents pour sécuriser la reprise des questionnaires.
+- Connexion PADOC (IFPC) pour tous les utilisateurs : les jurys peuvent s'identifier avec leur compte, les comptes locaux sont créés à la première connexion (`app_users`).
 
 ### Changed
+- L'administration n'est plus accessible que par PADOC, avec le rôle `animateur`. Le mot de passe partagé (`ADMIN_USERNAME` / `ADMIN_PASSWORD`) est supprimé.
+- Appels à PADOC forcés en HTTPS : l'instance annonce des adresses `http://` redirigées, ce qui cassait l'échange du code.
 - Amélioration des consignes pour les agents IA dans AGENTS.md.
 - Mise à jour du README avec structure complète.
 - Accès aux séances et réponses déplacés derrière des API serveur protégées.

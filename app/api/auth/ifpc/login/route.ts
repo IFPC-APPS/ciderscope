@@ -34,7 +34,7 @@ export async function GET(request: Request) {
   const demande = url.searchParams.get("returnTo") || "";
   const returnTo = demande.startsWith("/") && !demande.startsWith("//") ? demande : undefined;
 
-  const transient = createTransientState(returnTo);
+  const transient = createTransientState(returnTo, url.searchParams.get("admin") === "1");
 
   try {
     const destination = await padocAuthorizationUrl(transient, callbackUrlFor(request));

@@ -93,7 +93,7 @@ export default function CiderScope() {
     completion,
     validatedCompletion,
     flushSave,
-    adminAuth, setAdminAuth, capacites,
+    adminAuth, capacites,
     restored,
   } = useApp();
 
@@ -195,10 +195,7 @@ export default function CiderScope() {
   }
 
   if (mode === "admin" && !adminAuth) {
-    return <AdminLoginView onSuccess={() => {
-      setAdminAuth(true);
-      void loadSessions();
-    }} />;
+    return <AdminLoginView />;
   }
 
   return (

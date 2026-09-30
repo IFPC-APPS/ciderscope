@@ -78,7 +78,7 @@ Deux exports CSV sont disponibles depuis l'administration :
 ### Participant
 
 1. Selectionner une seance active.
-2. S'identifier par prenom ; la reprise sur le meme navigateur est automatique et ne demande aucun mot de passe.
+2. S'identifier par prenom ; la reprise sur le meme navigateur est automatique et ne demande aucun mot de passe. La connexion PADOC est proposee en option : elle pre-remplit le nom et rattache les reponses au compte.
 3. Choisir un poste de degustation disponible.
 4. Lire l'ordre de service personnalise.
 5. Remplir les questions et valider chaque etape complete.
@@ -86,13 +86,24 @@ Deux exports CSV sont disponibles depuis l'administration :
 
 ### Administration
 
-1. Se connecter a l'espace admin.
+1. Se connecter a l'espace admin avec PADOC (compte IFPC portant le role `animateur`).
 2. Gerer les seances et leurs statuts.
 3. Configurer les echantillons et le questionnaire.
 4. Suivre ou supprimer les jurys associes a une seance.
 5. Ouvrir les analyses et exporter les resultats.
 
-Les identifiants admin restent volontairement simples pour l'usage local. Ils peuvent être remplacés par `ADMIN_USERNAME` et `ADMIN_PASSWORD`; le cookie de session est signé côté serveur.
+### Authentification (PADOC / IFPC)
+
+CiderScope ne gère ni comptes ni mots de passe : la connexion passe exclusivement par la fédération OpenID Connect d'IFPC (« PADOC »), en Authorization Code + PKCE, comme client confidentiel. Le guide d'intégration IFPC fait référence.
+
+- Chaque utilisateur doit être **habilité sur CiderScope** par un administrateur IFPC ; sinon IFPC affiche « Accès non accordé ».
+- Les rôles reçus dans `https://ifpc.eu/claims/roles` sont ceux de CiderScope, à communiquer tels quels à l'administrateur IFPC :
+  - `animateur` : accès à l'espace d'administration ;
+  - `creneaux` : planification par créneaux et invitations Outlook (en plus d'`animateur`) ;
+  - aucun rôle : utilisateur classique (jury identifié), sans accès à l'administration.
+- Un compte local est créé à la première connexion dans `app_users`, rattaché par le `sub` IFPC — jamais par l'e-mail, qui n'est pas vérifié par IFPC.
+- Les URI de redirection sont comparées au caractère près : faire enregistrer `https://<domaine>/api/auth/ifpc/callback` pour chaque environnement (et `http://localhost:3000/api/auth/ifpc/callback` en développement).
+- La session CiderScope est un cookie HTTP-only signé (8 h). La déconnexion ferme la session CiderScope, pas celle d'IFPC.
 
 ## Documentation
 
@@ -142,9 +153,13 @@ SUPABASE_SERVICE_ROLE_KEY=
 DATABASE_URL=
 DIRECT_URL=
 
-ADMIN_USERNAME=ifpc
-ADMIN_PASSWORD=ifpc
 ADMIN_SESSION_SECRET=
+
+PADOC_ISSUER=http://spectacular-happiness-production-28b4.up.railway.app
+PADOC_CLIENT_ID=
+PADOC_CLIENT_SECRET=
+PADOC_REDIRECT_URI=
+PADOC_SCOPES=
 
 MICROSOFT_GRAPH_TENANT_ID=
 MICROSOFT_GRAPH_CLIENT_ID=
@@ -174,11 +189,15 @@ et `supabase/migrations/202607021330_remove_ics_fallback.sql`, puis
 `supabase/migrations/202607021730_promote_waitlist_on_cancel.sql`, puis
 `supabase/migrations/202607021800_outlook_decline_webhook.sql`, puis
 `supabase/migrations/202607171200_security_hardening.sql`, puis
-`supabase/migrations/202608031000_merge_sessions.sql`, avant d'utiliser la fusion de séances.
+`supabase/migrations/202608031000_merge_sessions.sql`, avant d'utiliser la fusion de séances, puis
+`supabase/migrations/202609301200_app_users.sql` pour les comptes créés à la connexion PADOC.
 
 - `SUPABASE_SERVICE_ROLE_KEY` reste uniquement cote serveur et permet aux API de faire respecter les controles metier.
 - La migration de durcissement ferme l'accès navigateur direct aux séances/réponses, ajoute un jeton local transparent pour la reprise et limite à 20 les demandes d'inscription quotidiennes par adresse.
-- `ADMIN_USERNAME`, `ADMIN_PASSWORD` et `ADMIN_SESSION_SECRET` pilotent le cookie admin HTTP-only utilise par les nouvelles API admin.
+- `ADMIN_SESSION_SECRET` signe le cookie de session HTTP-only (administrateurs et jurys connectés).
+- `PADOC_ISSUER`, `PADOC_CLIENT_ID` et `PADOC_CLIENT_SECRET` activent la connexion PADOC ; sans les trois, aucune connexion n'est possible. `PADOC_ISSUER` est l'émetteur exact annoncé par IFPC (sans `/` final) : toutes les autres adresses sont lues dans son document de découverte, et appelées en HTTPS.
+- `PADOC_REDIRECT_URI` (facultatif) fixe l'URI de retour enregistrée chez IFPC, utile derrière un proxy ; par défaut `<origine>/api/auth/ifpc/callback`.
+- `PADOC_SCOPES` (facultatif) remplace les portées demandées, `openid profile email` par défaut ; mettre `openid` si IFPC répond `invalid_scope`.
 - Si Microsoft Graph est configure, chaque inscription cree immediatement une invitation Outlook dediee dans le calendrier de `OUTLOOK_ORGANIZER_EMAIL`.
 - Si un creneau est complet, l'inscription reste possible en liste d'attente et l'invitation Outlook est envoyee en provisoire.
 - Quand une inscription confirmee est annulee, la premiere personne en liste d'attente est automatiquement confirmee.
@@ -196,7 +215,8 @@ Le schema Supabase est documente dans `supabase-schema.sql`. Il cree :
 
 - `sessions` : configuration, statut actif, compteur de jurys et visibilite des resultats ;
 - `answers` : reponses par couple seance / jury.
-- `session_slots`, `slot_registrations` et `email_domain_whitelist` via la migration des creneaux d'inscription.
+- `session_slots`, `slot_registrations` et `email_domain_whitelist` via la migration des creneaux d'inscription ;
+- `app_users` : comptes crees a la premiere connexion PADOC (cle = `sub` IFPC), et `answers.juror_subject` pour rattacher les reponses d'un jury connecte.
 
 Les politiques publiques historiques de `sessions` et `answers` sont retirées par la migration de durcissement. Les accès sensibles passent par les API serveur protégées.
 

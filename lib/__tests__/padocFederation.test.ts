@@ -5,11 +5,12 @@ import {
   codeChallengeFor,
   createTransientState,
   isPadocConfigured,
+  secureEndpoint,
+  toIdentity,
 } from "../server/padocFederation";
 
 import {
   CAPACITES,
-  createAdminSessionToken,
   createFederatedSessionToken,
   readAdminSessionToken,
   verifyAdminSessionToken,
@@ -80,17 +81,15 @@ describe("session d'administration", () => {
     expect(session?.subject).toBe("sub-123");
     expect(session?.user).toBe("Marie Durand");
     expect(session?.roles).toEqual(["animateur"]);
-    expect(session?.federated).toBe(true);
+    expect(session?.isAdmin).toBe(true);
   });
 
-  it("une session par mot de passe conserve toutes les capacités", () => {
-    // Le chemin historique du panel PADOC ne doit rien perdre : restreindre
-    // ici retirerait des fonctions à une installation en service.
-    const session = readAdminSessionToken(createAdminSessionToken("ifpc"));
+  it("une habilitation sans rôle donne une session de jury, pas d'administration", () => {
+    const session = readAdminSessionToken(createFederatedSessionToken("sub-7", "Jury", []));
 
-    expect(session?.roles).toContain(CAPACITES.ANIMATEUR);
-    expect(session?.roles).toContain(CAPACITES.CRENEAUX);
-    expect(session?.federated).toBe(false);
+    expect(session?.subject).toBe("sub-7");
+    expect(session?.roles).toEqual([]);
+    expect(session?.isAdmin).toBe(false);
   });
 
   it("un animateur cidrier n'obtient pas la capacité créneaux", () => {
@@ -135,6 +134,44 @@ describe("session d'administration", () => {
     const jeton = createFederatedSessionToken("s", "u", ["animateur"]);
 
     expect(verifyAdminSessionToken(jeton)).toBe(true);
+    expect(verifyAdminSessionToken(createFederatedSessionToken("s", "u", []))).toBe(false);
     expect(verifyAdminSessionToken("casse")).toBe(false);
+  });
+});
+
+describe("transport vers PADOC", () => {
+  it("force HTTPS sur les adresses annoncées en http par l'instance hébergée", () => {
+    // Un POST redirigé en 301 devient un GET sans corps : l'échange du code
+    // échouerait, après avoir envoyé le secret en clair.
+    expect(secureEndpoint("http://padoc.up.railway.app/oauth2/token"))
+      .toBe("https://padoc.up.railway.app/oauth2/token");
+    expect(secureEndpoint("https://padoc.exemple.fr/oauth2/jwks"))
+      .toBe("https://padoc.exemple.fr/oauth2/jwks");
+  });
+
+  it("laisse intact un PADOC local de développement", () => {
+    expect(secureEndpoint("http://localhost:9000/oauth2/token"))
+      .toBe("http://localhost:9000/oauth2/token");
+  });
+});
+
+describe("lecture des claims", () => {
+  it("prend les rôles CiderScope et ignore les valeurs vides", () => {
+    const identite = toIdentity({
+      sub: "sub-1",
+      "https://ifpc.eu/claims/roles": ["animateur", "", 42, "creneaux"],
+    });
+
+    expect(identite.roles).toEqual(["animateur", "creneaux"]);
+  });
+
+  it("recompose le nom à partir de ses parties quand `name` manque", () => {
+    expect(toIdentity({ sub: "s", given_name: "Marie", family_name: "Durand" }).name)
+      .toBe("Marie Durand");
+    expect(toIdentity({ sub: "s" }).name).toBeUndefined();
+  });
+
+  it("refuse un jeton sans sujet", () => {
+    expect(() => toIdentity({ name: "Personne" })).toThrow();
   });
 });

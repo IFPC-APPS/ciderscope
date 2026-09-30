@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ cookies: vi.fn() }));
@@ -6,8 +7,8 @@ vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
 
 import {
   CAPACITES,
-  createAdminSessionToken,
   createFederatedSessionToken,
+  requireAdmin,
   requireCapacite,
 } from "../server/adminAuth";
 
@@ -61,17 +62,49 @@ describe("requireCapacite", () => {
     expect(reponse?.status).toBe(401);
   });
 
-  it("laisse passer une session par mot de passe partagé", async () => {
-    // Le panel institutionnel ne doit rien perdre pendant la bascule.
-    avecSession(createAdminSessionToken("ifpc"));
+  it("refuse en 403 un jury connecté par PADOC, même doté de « creneaux »", async () => {
+    // Sans « animateur », pas d'administration du tout : une capacité fine ne
+    // rouvre pas la porte que la capacité de base ferme.
+    avecSession(createFederatedSessionToken("sub-3", "Jury", [CAPACITES.CRENEAUX]));
 
-    expect(await requireCapacite(CAPACITES.CRENEAUX)).toBeNull();
-    expect(await requireCapacite(CAPACITES.ANIMATEUR)).toBeNull();
+    expect((await requireCapacite(CAPACITES.CRENEAUX))?.status).toBe(403);
   });
 
   it("refuse un cookie dont la signature ne tient pas", async () => {
     avecSession("charge-inventee.signature-inventee");
 
     expect((await requireCapacite(CAPACITES.ANIMATEUR))?.status).toBe(401);
+  });
+});
+
+describe("requireAdmin", () => {
+  it("laisse passer un animateur", async () => {
+    avecSession(createFederatedSessionToken("sub-1", "Animatrice", [CAPACITES.ANIMATEUR]));
+
+    expect(await requireAdmin()).toBeNull();
+  });
+
+  it("refuse en 403 un utilisateur PADOC sans rôle", async () => {
+    // Habilité sur CiderScope sans rôle particulier : un jury identifié.
+    avecSession(createFederatedSessionToken("sub-4", "Jury", []));
+
+    expect((await requireAdmin())?.status).toBe(403);
+  });
+
+  it("refuse en 401 un ancien cookie ouvert par mot de passe partagé", async () => {
+    // Correctement signé, mais sans sujet PADOC : il ne désigne personne.
+    const charge = Buffer.from(JSON.stringify({
+      user: "ifpc",
+      nonce: "n",
+      exp: Date.now() + 60_000,
+      roles: [CAPACITES.ANIMATEUR, CAPACITES.CRENEAUX],
+      src: "motdepasse",
+    })).toString("base64url");
+    const signature = createHmac("sha256", "secret-de-test-des-capacites")
+      .update(charge)
+      .digest("base64url");
+    avecSession(`${charge}.${signature}`);
+
+    expect((await requireAdmin())?.status).toBe(401);
   });
 });

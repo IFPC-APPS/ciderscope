@@ -43,7 +43,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
   const handleLogout = useCallback(() => {
     sessionStorage.removeItem("admin_auth");
-    void fetch("/api/admin/logout", { method: "POST" }).catch(() => undefined);
+    void fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined);
     actions.setAdminAuth(false);
   }, [actions]);
 

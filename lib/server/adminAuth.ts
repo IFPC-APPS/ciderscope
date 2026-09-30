@@ -7,11 +7,14 @@ const SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
 const localSessionSecret = randomBytes(32).toString("base64url");
 
 /**
- * Capacités d'un animateur SUR CiderScope.
+ * Capacités d'un utilisateur SUR CiderScope.
  *
  * Ce sont NOS noms, pas ceux de l'organigramme PADOC : un rôle « expert
  * cidricole » n'a aucun sens ici, alors que « voit la planification » en a un.
  * PADOC les transmet tels quels sans les interpréter.
+ *
+ * Une habilitation PADOC sans aucun rôle est légitime : c'est un utilisateur
+ * classique (un jury), identifié mais sans accès à l'administration.
  */
 export const CAPACITES = {
   /** Créer et conduire des séances : c'est l'accès administrateur. */
@@ -22,33 +25,30 @@ export const CAPACITES = {
 
 export type Capacite = (typeof CAPACITES)[keyof typeof CAPACITES];
 
-type AdminPayload = {
+type SessionPayload = {
   user: string;
   nonce: string;
   exp: number;
-  /** Identifiant PADOC, opaque et stable. Absent pour une session mot de passe. */
-  sub?: string;
+  /** Identifiant PADOC, opaque et stable. */
+  sub: string;
   /** Capacités portées par la session. */
-  roles?: string[];
-  /** D'où vient cette session : « padoc » ou « motdepasse ». */
-  src?: "padoc" | "motdepasse";
+  roles: string[];
+  /** Origine de la session. Seule « padoc » est encore acceptée. */
+  src: "padoc";
 };
 
-export interface AdminSession {
+export interface UserSession {
+  /** Nom affiché. */
   user: string;
-  subject?: string;
+  /** Identifiant PADOC : la seule clé fiable pour désigner la personne. */
+  subject: string;
   roles: string[];
-  federated: boolean;
+  /** Vrai si la session ouvre l'espace d'administration. */
+  isAdmin: boolean;
 }
 
-/**
- * Capacités d'une session ouverte par mot de passe partagé.
- *
- * Tout, délibérément : c'est le chemin historique du panel PADOC, et le
- * restreindre retirerait des fonctions à une installation en service. Il
- * disparaîtra quand tous les animateurs seront passés par la fédération.
- */
-const CAPACITES_MOT_DE_PASSE: string[] = [CAPACITES.ANIMATEUR, CAPACITES.CRENEAUX];
+/** Conservé pour les appelants existants. */
+export type AdminSession = UserSession;
 
 const base64UrlEncode = (value: string | Buffer) => Buffer.from(value).toString("base64url");
 const base64UrlDecode = (value: string) => Buffer.from(value, "base64url").toString("utf8");
@@ -72,19 +72,10 @@ const safeEqual = (a: string, b: string) => {
   return left.length === right.length && timingSafeEqual(left, right);
 };
 
-const encodeSession = (payload: AdminPayload) => {
+const encodeSession = (payload: SessionPayload) => {
   const encoded = base64UrlEncode(JSON.stringify(payload));
   return `${encoded}.${sign(encoded)}`;
 };
-
-export const createAdminSessionToken = (user: string) =>
-  encodeSession({
-    user,
-    nonce: randomBytes(12).toString("hex"),
-    exp: Date.now() + SESSION_MAX_AGE_SECONDS * 1000,
-    roles: CAPACITES_MOT_DE_PASSE,
-    src: "motdepasse",
-  });
 
 /**
  * Session ouverte par PADOC.
@@ -108,21 +99,25 @@ export const createFederatedSessionToken = (
   });
 
 /** Relit la session, ou null si le jeton est absent, altéré ou expiré. */
-export const readAdminSessionToken = (token?: string): AdminSession | null => {
+export const readAdminSessionToken = (token?: string): UserSession | null => {
   if (!token) return null;
   const [encoded, signature] = token.split(".");
   if (!encoded || !signature || !safeEqual(signature, sign(encoded))) return null;
 
   try {
-    const payload = JSON.parse(base64UrlDecode(encoded)) as AdminPayload;
+    const payload = JSON.parse(base64UrlDecode(encoded)) as Partial<SessionPayload>;
     if (typeof payload.exp !== "number" || payload.exp <= Date.now()) return null;
+    // Une session sans sujet PADOC vient de l'ancien mot de passe partagé,
+    // retiré : elle ne désigne personne et n'ouvre plus rien.
+    if (payload.src !== "padoc" || typeof payload.sub !== "string" || !payload.sub) return null;
+    const roles = Array.isArray(payload.roles)
+      ? payload.roles.filter((r): r is string => typeof r === "string")
+      : [];
     return {
-      user: payload.user,
+      user: typeof payload.user === "string" ? payload.user : payload.sub,
       subject: payload.sub,
-      // Une session d'avant cette évolution n'a pas de rôles : lui refuser
-      // l'accès déconnecterait les animateurs en cours de séance.
-      roles: Array.isArray(payload.roles) ? payload.roles : CAPACITES_MOT_DE_PASSE,
-      federated: payload.src === "padoc",
+      roles,
+      isAdmin: roles.includes(CAPACITES.ANIMATEUR),
     };
   } catch {
     return null;
@@ -131,7 +126,7 @@ export const readAdminSessionToken = (token?: string): AdminSession | null => {
 
 /** Conservé : de nombreux appelants ne veulent qu'un booléen. */
 export const verifyAdminSessionToken = (token?: string) =>
-  readAdminSessionToken(token) !== null;
+  readAdminSessionToken(token)?.isAdmin === true;
 
 export const setAdminCookie = (response: NextResponse, token: string) => {
   response.cookies.set(ADMIN_COOKIE, token, {
@@ -153,32 +148,53 @@ export const clearAdminCookie = (response: NextResponse) => {
   });
 };
 
-/** La session courante, ou null. */
-export const readAdminSession = async (): Promise<AdminSession | null> => {
+/** La personne connectée, administratrice ou non, ou null. */
+export const readUserSession = async (): Promise<UserSession | null> => {
   const store = await cookies();
   return readAdminSessionToken(store.get(ADMIN_COOKIE)?.value);
 };
 
-export const isAdminRequest = async () => (await readAdminSession()) !== null;
-
-export const requireAdmin = async () => {
-  if (await isAdminRequest()) return null;
-  return NextResponse.json({ error: "Admin authentication required." }, { status: 401 });
+/** La session courante si elle ouvre l'administration, sinon null. */
+export const readAdminSession = async (): Promise<UserSession | null> => {
+  const session = await readUserSession();
+  return session?.isAdmin ? session : null;
 };
 
+export const isAdminRequest = async () => (await readAdminSession()) !== null;
+
 /**
- * Exige une capacité précise.
+ * Exige l'accès administrateur.
  *
- * Distinct de {@link requireAdmin} : être authentifié ne dit pas ce qu'on a le
- * droit de faire. Les routes de planification l'emploieront pour rester
- * fermées aux animateurs qui n'ont pas reçu la capacité « creneaux ».
+ * Être connecté ne suffit plus : un jury identifié par PADOC a une session,
+ * mais pas la capacité « animateur ». 401 invite à se connecter, 403 dit que
+ * le droit manque.
  */
-export const requireCapacite = async (capacite: Capacite) => {
-  const session = await readAdminSession();
+export const requireAdmin = async () => {
+  const session = await readUserSession();
   if (!session) {
     return NextResponse.json({ error: "Admin authentication required." }, { status: 401 });
   }
-  if (!session.roles.includes(capacite)) {
+  if (!session.isAdmin) {
+    return NextResponse.json(
+      { error: `Capacité « ${CAPACITES.ANIMATEUR} » requise.` },
+      { status: 403 },
+    );
+  }
+  return null;
+};
+
+/**
+ * Exige une capacité précise, en plus de l'accès administrateur.
+ *
+ * Être animateur ne dit pas tout ce qu'on a le droit de faire : les routes de
+ * planification restent fermées aux animateurs qui n'ont pas reçu la capacité
+ * « creneaux ».
+ */
+export const requireCapacite = async (capacite: Capacite) => {
+  const refus = await requireAdmin();
+  if (refus) return refus;
+  const session = await readAdminSession();
+  if (!session?.roles.includes(capacite)) {
     // 403 et non 404 : la route existe, c'est le droit qui manque. Masquer
     // son existence n'apporterait rien, l'interface la nomme déjà.
     return NextResponse.json(
@@ -187,11 +203,4 @@ export const requireCapacite = async (capacite: Capacite) => {
     );
   }
   return null;
-};
-
-export const isValidAdminCredentials = (login: string, password: string) => {
-  const expectedLogin = process.env.ADMIN_USERNAME || "ifpc";
-  const expectedPassword = process.env.ADMIN_PASSWORD || "ifpc";
-  return safeEqual(login.trim().toLowerCase(), expectedLogin.trim().toLowerCase())
-    && safeEqual(password, expectedPassword);
 };

@@ -4,6 +4,7 @@ import {
   createFederatedSessionToken,
   setAdminCookie,
 } from "../../../../../lib/server/adminAuth";
+import { upsertFederatedUser } from "../../../../../lib/server/userAccounts";
 import {
   PADOC_STATE_COOKIE,
   exchangeCodeForIdentity,
@@ -26,10 +27,13 @@ const echec = (request: Request, motif: string) => {
 /**
  * Retour de PADOC après authentification.
  *
- * Trois contrôles avant d'ouvrir une session, dans cet ordre : le `state`
- * atteste que ce retour répond bien à une demande partie d'ici, l'échange du
- * code vérifie signature, émetteur, audience, expiration et `nonce`, puis la
- * capacité « animateur » décide de l'accès.
+ * Deux contrôles avant d'ouvrir une session, dans cet ordre : le `state`
+ * atteste que ce retour répond bien à une demande partie d'ici, puis l'échange
+ * du code vérifie signature, émetteur, audience, expiration et `nonce`.
+ *
+ * Toute personne habilitée par PADOC obtient une session : les rôles reçus
+ * disent ensuite ce qu'elle peut faire. Sans « animateur », c'est un jury
+ * identifié, qui n'ouvre pas l'administration.
  */
 export async function GET(request: Request) {
   if (!isPadocConfigured()) {
@@ -80,12 +84,19 @@ export async function GET(request: Request) {
       callbackUrlFor(request),
     );
 
-    // Authentifié ne veut pas dire autorisé : sans la capacité « animateur »,
-    // la personne n'a rien à faire dans l'espace d'administration.
-    if (!identite.roles.includes(CAPACITES.ANIMATEUR)) {
+    // Authentifié ne veut pas dire autorisé : partie de l'écran
+    // d'administration, une personne sans capacité « animateur » doit savoir
+    // pourquoi elle n'y entre pas.
+    if (transient.admin && !identite.roles.includes(CAPACITES.ANIMATEUR)) {
       console.warn("[padoc] compte sans capacité animateur :", identite.subject);
       return echec(request, "sans-role");
     }
+
+    // Compte local créé à la première connexion. Un incident de base ne doit
+    // pas fermer la porte : la session repose sur le cookie, pas sur la table.
+    await upsertFederatedUser(identite).catch((error: unknown) => {
+      console.error("[padoc] enregistrement du compte local impossible", error);
+    });
 
     const destination = new URL(transient.returnTo || "/", new URL(request.url).origin);
     const response = NextResponse.redirect(destination);

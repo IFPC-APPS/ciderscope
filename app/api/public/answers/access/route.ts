@@ -7,6 +7,8 @@ import {
   normalizeJurorName,
 } from "../../../../../lib/server/sessionSecurity";
 import { claimJurorIdentity, listOccupiedPostes } from "../../../../../lib/server/sessionStore";
+import { readUserSession } from "../../../../../lib/server/adminAuth";
+import { linkJurorAccount } from "../../../../../lib/server/userAccounts";
 
 export const runtime = "nodejs";
 
@@ -37,6 +39,15 @@ export async function POST(request: Request) {
         ? "Ce prénom est déjà utilisé sur un autre appareil."
         : "Cette séance n'est plus disponible.";
       return NextResponse.json({ ok: false, code: result.code, message }, { status: 409 });
+    }
+
+    // Jury connecté par PADOC : ses réponses sont rattachées à son compte.
+    // Au mieux : le parcours par prénom seul doit continuer de fonctionner.
+    const session = await readUserSession();
+    if (session) {
+      await linkJurorAccount(sessionId, jurorName, session.subject).catch((error: unknown) => {
+        console.error("Participant account link error:", error);
+      });
     }
 
     return NextResponse.json({

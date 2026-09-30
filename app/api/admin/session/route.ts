@@ -14,6 +14,10 @@ export const dynamic = "force-dynamic";
  * ce drapeau ; et un drapeau de navigateur ne dit rien des capacités réelles,
  * que seul le serveur connaît.</p>
  *
+ * <p>« Authentifié » veut dire ici « administrateur » : un jury connecté par
+ * PADOC sans capacité « animateur » est vu comme non connecté. Pour savoir qui
+ * est connecté quel que soit son rôle, voir `/api/auth/session`.</p>
+ *
  * <p>Ce que renvoie cette route ne décide de rien : c'est un confort
  * d'affichage. Les routes sensibles vérifient la capacité elles-mêmes — masquer
  * un bouton n'a jamais protégé une API.</p>
@@ -35,6 +39,5 @@ export async function GET() {
     padocAvailable: isPadocConfigured(),
     user: session.user,
     roles: session.roles,
-    federated: session.federated,
   });
 }
