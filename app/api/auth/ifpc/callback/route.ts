@@ -11,13 +11,13 @@ import {
   isPadocConfigured,
   type PadocTransientState,
 } from "../../../../../lib/server/padocFederation";
-import { callbackUrlFor } from "../callbackUrl";
+import { appOrigin, callbackUrlFor } from "../callbackUrl";
 
 export const runtime = "nodejs";
 
 /** Renvoie sur l'accueil avec un motif lisible, plutôt qu'un JSON nu. */
 const echec = (request: Request, motif: string) => {
-  const destination = new URL("/", new URL(request.url).origin);
+  const destination = new URL("/", appOrigin(request));
   destination.searchParams.set("connexion", motif);
   const response = NextResponse.redirect(destination);
   response.cookies.set(PADOC_STATE_COOKIE, "", { path: "/", maxAge: 0 });
@@ -98,7 +98,7 @@ export async function GET(request: Request) {
       console.error("[padoc] enregistrement du compte local impossible", error);
     });
 
-    const destination = new URL(transient.returnTo || "/", new URL(request.url).origin);
+    const destination = new URL(transient.returnTo || "/", appOrigin(request));
     const response = NextResponse.redirect(destination);
     setAdminCookie(
       response,

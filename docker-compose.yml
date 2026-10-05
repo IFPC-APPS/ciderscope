@@ -1,0 +1,73 @@
+# Déploiement de CiderScope à côté de PADOC.
+#
+# Compose distinct, et non un service ajouté à celui de PADOC : les deux
+# applications appartiennent à la même structure mais restent deux projets,
+# avec leurs dépôts et leurs cycles de vie. Les fusionner dans un seul fichier
+# rendrait impossible de redéployer l'une sans toucher l'autre — le couplage
+# que la séparation vise précisément à éviter.
+#
+# Ce qu'elles partagent : le serveur PostgreSQL, et lui seul. CiderScope y a
+# son propre schéma et son propre utilisateur, sans aucun droit sur celui de
+# PADOC (voir db/install-postgres.sql).
+
+name: ciderscope
+
+services:
+  app:
+    build:
+      context: .
+    container_name: ciderscope-app
+    environment:
+      # Base de PADOC, schéma ciderscope. Le search_path est porté par le rôle
+      # lui-même (ALTER ROLE ... SET search_path), pas par cette URL : une
+      # chaîne de connexion se recopie et s'oublie, un réglage de rôle non.
+      DATABASE_URL: ${CIDERSCOPE_DATABASE_URL:?définir CIDERSCOPE_DATABASE_URL}
+      DIRECT_URL: ${CIDERSCOPE_DATABASE_URL}
+
+      # Secret de signature des sessions d'animateur.
+      #
+      # Sans lui, adminAuth retombe sur un aléa tiré PAR PROCESSUS : au premier
+      # redémarrage, toutes les sessions ouvertes deviennent invalides.
+      ADMIN_SESSION_SECRET: ${CIDERSCOPE_SESSION_SECRET:?définir CIDERSCOPE_SESSION_SECRET}
+
+      # Fédération PADOC. Vides, la connexion par PADOC n'est pas proposée et
+      # seul le mot de passe partagé reste utilisable.
+      PADOC_ISSUER: ${PADOC_ISSUER:-}
+      PADOC_CLIENT_ID: ${PADOC_CLIENT_ID:-}
+      PADOC_CLIENT_SECRET: ${PADOC_CLIENT_SECRET:-}
+      PADOC_REDIRECT_URI: ${PADOC_REDIRECT_URI:-}
+
+      # « 1 » autorise un PADOC interne en HTTP sans TLS. À retirer dès qu'un
+      # proxy TLS sera en place : en clair, le secret client et le code
+      # d'autorisation circulent sans protection.
+      PADOC_ALLOW_INSECURE_HTTP: ${PADOC_ALLOW_INSECURE_HTTP:-}
+
+      # Identifiants de repli, le temps que tous les animateurs basculent sur
+      # la fédération. À retirer ensuite.
+      ADMIN_USERNAME: ${CIDERSCOPE_ADMIN_USERNAME:-}
+      ADMIN_PASSWORD: ${CIDERSCOPE_ADMIN_PASSWORD:-}
+
+      # Volontairement NON définies : leur absence fait basculer le code sur le
+      # chemin SQL direct (getSupabaseAdminIfConfigured renvoie null).
+      # NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY
+    ports:
+      - "${CIDERSCOPE_PORT:-3001}:3000"
+    healthcheck:
+      # 127.0.0.1 et non localhost : dans le conteneur, localhost résout vers
+      # ::1 en premier alors que Next n'écoute qu'en IPv4.
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - padoc
+
+networks:
+  # Réseau créé par le compose de PADOC : c'est par lui que l'on atteint
+  # padoc-db. Déclaré « external » pour que ce fichier ne tente jamais de le
+  # créer ni de le supprimer.
+  padoc:
+    external: true
+    name: padoc_default

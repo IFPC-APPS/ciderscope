@@ -84,9 +84,29 @@ export const padocScopes = () => (process.env.PADOC_SCOPES || "openid profile em
 export const secureEndpoint = (adresse: string) => {
   const url = new URL(adresse);
   const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
-  if (url.protocol === "http:" && !local) url.protocol = "https:";
+  if (url.protocol === "http:" && !local && !autoriseHttpInterne()) {
+    url.protocol = "https:";
+  }
   return url.toString();
 };
+
+/**
+ * Sortie de secours pour un PADOC interne sans TLS.
+ *
+ * Le forçage HTTPS ci-dessus suppose que l'émetteur est joignable en HTTPS —
+ * vrai sur Railway, faux sur un déploiement interne où PADOC écoute en clair
+ * sur un port d'un réseau privé, sans certificat. Sans cette échappatoire, la
+ * découverte échoue en ERR_SSL_WRONG_VERSION_NUMBER, erreur d'autant plus
+ * déroutante qu'elle désigne le chiffrement là où le problème est l'absence de
+ * chiffrement.
+ *
+ * À n'activer QUE sur un réseau de confiance : en clair, le secret client et
+ * le code d'autorisation circulent sans protection. Jamais sur une instance
+ * exposée à Internet — le jour où un proxy TLS sera en place, cette variable
+ * doit disparaître.
+ */
+const autoriseHttpInterne = () =>
+  process.env.PADOC_ALLOW_INSECURE_HTTP === "1";
 
 /** Vrai si la fédération est configurée sur cette instance. */
 export const isPadocConfigured = () =>

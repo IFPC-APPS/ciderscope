@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { cookieSecurise } from "./cookieSecurity";
 import { NextResponse } from "next/server";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
@@ -132,7 +133,7 @@ export const setAdminCookie = (response: NextResponse, token: string) => {
   response.cookies.set(ADMIN_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: cookieSecurise(),
     path: "/",
     maxAge: SESSION_MAX_AGE_SECONDS,
   });
@@ -142,7 +143,7 @@ export const clearAdminCookie = (response: NextResponse) => {
   response.cookies.set(ADMIN_COOKIE, "", {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: cookieSecurise(),
     path: "/",
     maxAge: 0,
   });

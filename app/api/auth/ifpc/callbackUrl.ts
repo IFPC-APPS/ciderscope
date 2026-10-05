@@ -15,3 +15,28 @@ export const callbackUrlFor = (request: Request) => {
   if (configuree) return configuree;
   return new URL("/api/auth/ifpc/callback", new URL(request.url).origin).toString();
 };
+
+/**
+ * Origine publique de l'application, pour les redirections de fin de parcours.
+ *
+ * `new URL(request.url).origin` renvoie l'adresse sur laquelle le serveur écoute
+ * — « http://localhost:3000 » dans un conteneur — et non celle par laquelle
+ * l'utilisateur est arrivé. L'utilisateur se retrouvait donc renvoyé vers une
+ * adresse qui n'existe que dans le conteneur.
+ *
+ * On part de PADOC_REDIRECT_URI, qui désigne forcément l'adresse publique :
+ * elle est comparée au caractère près par PADOC, elle ne peut donc pas être
+ * fausse. À défaut, on retombe sur l'origine de la requête, ce qui convient au
+ * développement local.
+ */
+export const appOrigin = (request: Request) => {
+  const configuree = process.env.PADOC_REDIRECT_URI;
+  if (configuree) {
+    try {
+      return new URL(configuree).origin;
+    } catch {
+      // URI mal formée : le repli vaut mieux qu'une exception ici.
+    }
+  }
+  return new URL(request.url).origin;
+};

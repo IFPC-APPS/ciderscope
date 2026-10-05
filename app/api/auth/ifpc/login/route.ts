@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookieSecurise } from "../../../../../lib/server/cookieSecurity";
 import {
   PADOC_STATE_COOKIE,
   PADOC_STATE_MAX_AGE_SECONDS,
@@ -42,7 +43,7 @@ export async function GET(request: Request) {
     response.cookies.set(PADOC_STATE_COOKIE, JSON.stringify(transient), {
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      secure: cookieSecurise(),
       path: "/",
       maxAge: PADOC_STATE_MAX_AGE_SECONDS,
     });
