@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useMemo, useCallback, type ReactNode } from "react";
 import { Topbar } from "../components/ui/Topbar";
-import { BarreLaterale } from "../components/ui/BarreLaterale";
+import { BarreLaterale, type EntreeNav } from "../components/ui/BarreLaterale";
+import { FiBarChart2, FiCalendar, FiHome, FiList, FiSettings, FiUsers } from "react-icons/fi";
 import { useSenso, type SensoState, type SensoActions } from "../hooks/useSenso";
 import { oublierSession, useSession } from "../lib/useSession";
 
@@ -63,44 +64,75 @@ export function AppProviders({ children }: { children: ReactNode }) {
     [actions, handleLogout]
   );
 
+  const nomUtilisateur = session?.user?.name ?? session?.user?.email ?? null;
+  // Null quand la fédération n'est pas configurée : proposer une connexion qui
+  // ne peut pas aboutir est pire que ne rien proposer.
+  const lienConnexion = session?.padocAvailable === false ? null : "/api/auth/ifpc/login";
+
+  // La passation proprement dite, et non l'écran de choix : c'est là que le
+  // dégustateur doit rester concentré.
+  const enPassation = state.mode === "participant" && state.screen !== "landing";
+
+  const peutCreneaux = !state.capacites?.length || state.capacites.includes("creneaux");
+
+  const entrees: EntreeNav[] = state.mode === "admin"
+    ? [
+        { cle: "seances", libelle: "Séances", icone: <FiList size={18} />,
+          actif: state.adminSection === "seances", onClick: () => actions.setAdminSection("seances") },
+        ...(peutCreneaux ? [{
+          cle: "creneaux", libelle: "Créneaux", icone: <FiCalendar size={18} />,
+          actif: state.adminSection === "creneaux", onClick: () => actions.setAdminSection("creneaux"),
+        }] : []),
+        { cle: "analyse", libelle: "Analyse", icone: <FiBarChart2 size={18} />,
+          actif: state.adminSection === "analyse", onClick: () => actions.setAdminSection("analyse") },
+        { cle: "passation", libelle: "Passation", icone: <FiUsers size={18} />,
+          onClick: () => { actions.setMode("participant"); actions.setScreen("landing"); } },
+      ]
+    : [
+        { cle: "accueil", libelle: "Accueil", icone: <FiHome size={18} />,
+          actif: state.mode === "home",
+          onClick: () => { actions.setMode("home"); actions.setScreen("landing"); } },
+        { cle: "degustation", libelle: "Rejoindre une dégustation", icone: <FiUsers size={18} />,
+          actif: state.mode === "participant",
+          onClick: () => { actions.setMode("participant"); actions.setScreen("landing"); } },
+        // L'animateur garde l'accès à son espace depuis n'importe où.
+        ...(session?.isAdmin ? [{
+          cle: "administration", libelle: "Administration", icone: <FiSettings size={18} />,
+          onClick: () => { actions.setMode("admin"); actions.setScreen("landing"); },
+        }] : []),
+      ];
+
   return (
     <AppActionsContext.Provider value={actionsValue}>
       <AppStateContext.Provider value={state}>
-        {/* L'espace d'animation prend la barre latérale de PADOC ; le parcours
-            de dégustation garde son bandeau. Une barre latérale mangerait la
-            largeur sur un téléphone posé dans un chai, et offrirait au
-            dégustateur des sorties au milieu de sa passation — ce que l'écran
-            cherche justement à éviter. */}
-        {state.mode === "admin" ? (
-          <>
-            <BarreLaterale
-              section={state.adminSection}
-              onSection={actions.setAdminSection}
-              peutCreneaux={!state.capacites?.length || state.capacites.includes("creneaux")}
-              onPassation={() => {
-                actions.setMode("participant");
-                actions.setScreen("landing");
-              }}
-              nomUtilisateur={session?.user?.name ?? session?.user?.email ?? null}
-              online={state.online}
-              onLogout={session?.authenticated ? handleLogout : undefined}
-            />
-            <main className="max-w-full overflow-x-clip pt-14 lg:pt-0 lg:pl-[52px]">{children}</main>
-          </>
-        ) : (
+        {/* La barre latérale accompagne la navigation ; elle s'efface pendant
+            la passation elle-même. Un dégustateur au milieu de sa séance n'a
+            pas à se voir offrir des portes de sortie, et sur un téléphone posé
+            dans un chai la largeur est précieuse. Partout ailleurs elle reste,
+            car la voir disparaître d'un écran à l'autre déroute. */}
+        {enPassation ? (
           <>
             <Topbar
               mode={state.mode}
               online={state.online}
-              nomUtilisateur={session?.user?.name ?? session?.user?.email ?? null}
+              nomUtilisateur={nomUtilisateur}
               administrateur={session?.isAdmin === true}
-              onModeChange={(m) => {
-                actions.setMode(m);
-                actions.setScreen("landing");
-              }}
+              lienConnexion={lienConnexion}
+              onModeChange={(m) => { actions.setMode(m); actions.setScreen("landing"); }}
               onLogout={session?.authenticated ? handleLogout : undefined}
             />
             <main className="max-w-full overflow-x-clip pt-13 sm:pt-15">{children}</main>
+          </>
+        ) : (
+          <>
+            <BarreLaterale
+              entrees={entrees}
+              nomUtilisateur={nomUtilisateur}
+              lienConnexion={lienConnexion}
+              online={state.online}
+              onLogout={session?.authenticated ? handleLogout : undefined}
+            />
+            <main className="max-w-full overflow-x-clip pt-14 lg:pt-0 lg:pl-[52px]">{children}</main>
           </>
         )}
       </AppStateContext.Provider>

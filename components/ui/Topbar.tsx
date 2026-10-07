@@ -1,4 +1,4 @@
-import { FiLogOut, FiSettings, FiUsers } from "react-icons/fi";
+import { FiLogIn, FiLogOut, FiSettings, FiUsers } from "react-icons/fi";
 
 interface TopbarProps {
   mode: "home" | "participant" | "admin";
@@ -9,6 +9,8 @@ interface TopbarProps {
   nomUtilisateur?: string | null;
   /** Le compte peut-il administrer ? Seul lui voit la bascule entre espaces. */
   administrateur?: boolean;
+  /** Null si la fédération n'est pas configurée. */
+  lienConnexion?: string | null;
 }
 
 /**
@@ -35,6 +37,7 @@ export const Topbar = ({
   onLogout,
   nomUtilisateur,
   administrateur = false,
+  lienConnexion,
 }: TopbarProps) => (
   <div className="fixed inset-x-0 top-0 z-[100] flex h-13 max-w-[100vw] flex-nowrap items-center gap-1.5 overflow-x-auto border-b border-gray-100 bg-white/95 px-3 backdrop-blur-sm [scrollbar-width:none] sm:h-15 sm:gap-3 sm:px-6 [&::-webkit-scrollbar]:hidden">
     <div className="flex items-center gap-2.5 whitespace-nowrap">
@@ -63,14 +66,15 @@ export const Topbar = ({
           ? "border-[rgba(98,141,23,.18)] bg-[rgba(98,141,23,.07)] text-[var(--primary)]"
           : "border-[rgba(198,40,40,.18)] bg-[rgba(198,40,40,.06)] text-[var(--danger)]"
       }`}
-      // Le mot, et pas seulement la pastille : l'état doit se lire sans
-      // distinguer le vert du rouge.
+      // « En ligne », et non « Connecté » : cette pastille dit que le serveur
+      // répond, pas qu'un compte est ouvert. Le mot plutôt que la seule
+      // couleur, aussi : l'état doit se lire sans distinguer vert et rouge.
     >
       <span
         className={`h-1.5 w-1.5 rounded-full ${online ? "animate-pulse bg-[var(--primary)]" : "bg-[var(--danger)]"}`}
         aria-hidden="true"
       />
-      {online ? "Connecté" : "Local"}
+      {online ? "En ligne" : "Hors ligne"}
     </span>
 
     <div className="flex gap-px sm:gap-1">
@@ -95,6 +99,12 @@ export const Topbar = ({
             <span className="hidden sm:inline">Administration</span>
           </button>
         </>
+      )}
+      {!nomUtilisateur && lienConnexion && (
+        <a className={navButtonClass()} href={lienConnexion} title="Se connecter">
+          <FiLogIn size={14} />
+          <span className="hidden sm:inline">Se connecter</span>
+        </a>
       )}
       {onLogout && (
         <button
