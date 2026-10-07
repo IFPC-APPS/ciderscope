@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 
 import { ParticipantView } from "../components/views/Participant/ParticipantView";
@@ -11,6 +11,7 @@ import { validateSession } from "../lib/validation";
 import { hsh } from "../lib/utils";
 import { getStepCompletionKey } from "../lib/sessionSteps";
 import { useApp } from "./AppProviders";
+import { useSession } from "../lib/useSession";
 
 import { downloadCSV } from "../lib/csv";
 
@@ -97,6 +98,17 @@ export default function CiderScope() {
     restored,
   } = useApp();
 
+  // L'espace est décidé par le compte, non par un choix fait à l'entrée :
+  // un animateur va à l'administration, les autres à la passation. Un
+  // animateur peut toujours basculer ensuite depuis le bandeau.
+  const { session, chargement: chargementSession } = useSession();
+
+  useEffect(() => {
+    if (chargementSession || !session?.authenticated || mode !== "home") return;
+    setMode(session.isAdmin ? "admin" : "participant");
+    setScreen("landing");
+  }, [chargementSession, session, mode, setMode, setScreen]);
+
   const currentNavigation: NavigationPoint = { mode, screen, adminSection };
 
   if (!restored) {
@@ -112,12 +124,13 @@ export default function CiderScope() {
   };
 
   if (mode === "home") {
-    return (
-      <HomeScreen
-        onSelectParticipant={() => { setMode("participant"); setScreen("landing"); }}
-        onSelectAdmin={() => { setMode("admin"); setScreen("landing"); }}
-      />
-    );
+    // Tant que la session n'est pas connue, on n'affiche rien de définitif :
+    // montrer l'écran de connexion puis le remplacer aussitôt donnerait
+    // l'impression d'une application qui hésite.
+    if (chargementSession) {
+      return <div className="p-8 text-center text-[var(--mid)]">Chargement…</div>;
+    }
+    return <HomeScreen padocDisponible={session?.padocAvailable !== false} />;
   }
 
   if (mode === "participant") {

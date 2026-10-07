@@ -3,6 +3,7 @@
 import { createContext, useContext, useMemo, useCallback, type ReactNode } from "react";
 import { Topbar } from "../components/ui/Topbar";
 import { useSenso, type SensoState, type SensoActions } from "../hooks/useSenso";
+import { oublierSession, useSession } from "../lib/useSession";
 
 // Contexte d'actions : référence stable, ne se ré-émet jamais après le premier render
 // (toutes les actions sont useCallback à deps vides).
@@ -40,11 +41,17 @@ export const useApp = (): AppContextValue => {
 
 export function AppProviders({ children }: { children: ReactNode }) {
   const { state, actions } = useSenso();
+  const { session } = useSession();
 
   const handleLogout = useCallback(() => {
     sessionStorage.removeItem("admin_auth");
     void fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined);
     actions.setAdminAuth(false);
+    // Sans cela, le bandeau continuerait d'afficher le nom et la bascule entre
+    // espaces d'un compte qui vient de partir.
+    oublierSession();
+    actions.setMode("home");
+    actions.setScreen("landing");
   }, [actions]);
 
   // Actions étendues : on injecte handleLogout. handleLogout est stable car
@@ -61,15 +68,13 @@ export function AppProviders({ children }: { children: ReactNode }) {
         <Topbar
           mode={state.mode}
           online={state.online}
+          nomUtilisateur={session?.user?.name ?? session?.user?.email ?? null}
+          administrateur={session?.isAdmin === true}
           onModeChange={(m) => {
             actions.setMode(m);
             actions.setScreen("landing");
           }}
-          onHome={() => {
-            actions.setMode("home");
-            actions.setScreen("landing");
-          }}
-          onLogout={state.adminAuth ? handleLogout : undefined}
+          onLogout={session?.authenticated ? handleLogout : undefined}
         />
         <main className="max-w-full overflow-x-clip pt-13 sm:pt-15">{children}</main>
       </AppStateContext.Provider>
