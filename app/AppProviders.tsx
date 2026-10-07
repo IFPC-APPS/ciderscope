@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useMemo, useCallback, type ReactNode } from "react";
 import { Topbar } from "../components/ui/Topbar";
+import { BarreLaterale } from "../components/ui/BarreLaterale";
 import { useSenso, type SensoState, type SensoActions } from "../hooks/useSenso";
 import { oublierSession, useSession } from "../lib/useSession";
 
@@ -65,18 +66,43 @@ export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <AppActionsContext.Provider value={actionsValue}>
       <AppStateContext.Provider value={state}>
-        <Topbar
-          mode={state.mode}
-          online={state.online}
-          nomUtilisateur={session?.user?.name ?? session?.user?.email ?? null}
-          administrateur={session?.isAdmin === true}
-          onModeChange={(m) => {
-            actions.setMode(m);
-            actions.setScreen("landing");
-          }}
-          onLogout={session?.authenticated ? handleLogout : undefined}
-        />
-        <main className="max-w-full overflow-x-clip pt-13 sm:pt-15">{children}</main>
+        {/* L'espace d'animation prend la barre latérale de PADOC ; le parcours
+            de dégustation garde son bandeau. Une barre latérale mangerait la
+            largeur sur un téléphone posé dans un chai, et offrirait au
+            dégustateur des sorties au milieu de sa passation — ce que l'écran
+            cherche justement à éviter. */}
+        {state.mode === "admin" ? (
+          <>
+            <BarreLaterale
+              section={state.adminSection}
+              onSection={actions.setAdminSection}
+              peutCreneaux={!state.capacites?.length || state.capacites.includes("creneaux")}
+              onPassation={() => {
+                actions.setMode("participant");
+                actions.setScreen("landing");
+              }}
+              nomUtilisateur={session?.user?.name ?? session?.user?.email ?? null}
+              online={state.online}
+              onLogout={session?.authenticated ? handleLogout : undefined}
+            />
+            <main className="max-w-full overflow-x-clip pt-14 lg:pt-0 lg:pl-[52px]">{children}</main>
+          </>
+        ) : (
+          <>
+            <Topbar
+              mode={state.mode}
+              online={state.online}
+              nomUtilisateur={session?.user?.name ?? session?.user?.email ?? null}
+              administrateur={session?.isAdmin === true}
+              onModeChange={(m) => {
+                actions.setMode(m);
+                actions.setScreen("landing");
+              }}
+              onLogout={session?.authenticated ? handleLogout : undefined}
+            />
+            <main className="max-w-full overflow-x-clip pt-13 sm:pt-15">{children}</main>
+          </>
+        )}
       </AppStateContext.Provider>
     </AppActionsContext.Provider>
   );

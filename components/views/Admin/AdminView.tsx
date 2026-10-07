@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useMemo, useState, Dispatch, SetStateAction } from "react";
 import dynamic from "next/dynamic";
-import { FiChevronLeft, FiChevronRight, FiEdit2, FiCopy, FiX, FiCheck, FiArrowLeft, FiPlus, FiBarChart2, FiList, FiPieChart, FiCalendar, FiGrid } from "react-icons/fi";
+import { FiChevronLeft, FiChevronRight, FiEdit2, FiCopy, FiX, FiCheck, FiArrowLeft, FiPlus, FiBarChart2, FiList, FiPieChart, FiGrid } from "react-icons/fi";
 import { Button } from "../../ui/Button";
 import { Card } from "../../ui/Card";
 import { Badge } from "../../ui/Badge";
@@ -348,31 +348,9 @@ export const AdminView = ({
       <>
       <AdminHelpNotifications sessionId={helpSessionId} sessionName={helpSessionName} />
       <div className={adminShellClass}>
-        <div className="mb-5 flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant={adminSection === "seances" ? "ok" : "secondary"}
-            onClick={() => setAdminSection("seances")}
-          >
-            <FiList /> Séances
-          </Button>
-          {peutCreneaux && (
-            <Button
-              size="sm"
-              variant={adminSection === "creneaux" ? "ok" : "secondary"}
-              onClick={() => setAdminSection("creneaux")}
-            >
-              <FiCalendar /> Créneaux
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant={adminSection === "analyse" ? "ok" : "secondary"}
-            onClick={() => setAdminSection("analyse")}
-          >
-            <FiBarChart2 /> Analyse
-          </Button>
-        </div>
+        {/* Les sections sont portées par la barre latérale. Les laisser aussi
+            ici ferait deux navigations pour la même chose, qui finiraient par
+            ne plus dire pareil. */}
 
         {adminSection === "analyse" && (
           <AnalyseView
