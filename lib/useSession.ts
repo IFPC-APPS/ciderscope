@@ -5,7 +5,12 @@ import { useEffect, useState } from "react";
 export interface SessionUtilisateur {
   authenticated: boolean;
   padocAvailable: boolean;
-  user?: { name?: string | null; email?: string | null; subject?: string };
+  /**
+   * Nom affichable, en texte — c'est ce que renvoie `/api/auth/session`. Le
+   * type annonçait un objet `{ name, email }` : lu ainsi, le nom restait
+   * introuvable et une personne connectée se voyait proposer « Se connecter ».
+   */
+  user?: string;
   roles?: string[];
   isAdmin?: boolean;
 }

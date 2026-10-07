@@ -64,7 +64,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
     [actions, handleLogout]
   );
 
-  const nomUtilisateur = session?.user?.name ?? session?.user?.email ?? null;
+  const nomUtilisateur = session?.authenticated ? session.user || null : null;
   // Null quand la fédération n'est pas configurée : proposer une connexion qui
   // ne peut pas aboutir est pire que ne rien proposer.
   const lienConnexion = session?.padocAvailable === false ? null : "/api/auth/ifpc/login";
