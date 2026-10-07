@@ -17,6 +17,7 @@ import { QuestionBuilder } from "./QuestionBuilder";
 import { SlotAdminView } from "./SlotAdminView";
 import { AdminHelpNotifications } from "./AdminHelpNotifications";
 import { SessionMergeCard } from "./SessionMergeCard";
+import { avecCreneaux, genreDe, GENRES } from "../../../lib/genreSeance";
 
 const adminShellClass = "mx-auto max-w-full overflow-x-clip px-[22px] py-7 pb-[60px] sm:max-w-[95%] supports-[not(overflow-x:clip)]:overflow-x-hidden";
 const sessionCardClass = "mb-2.5 flex max-w-full min-w-0 flex-wrap items-center gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--paper)] px-5 py-[18px] shadow-[var(--shadow)] transition-[box-shadow,border-color] duration-150 hover:border-[rgba(30,46,46,.18)] hover:shadow-[0_3px_16px_rgba(30,46,46,.09)]";
@@ -151,6 +152,10 @@ export const AdminView = ({
   // Absence de capacités = session d'avant cette évolution, ou mot de passe
   // partagé : on n'enlève rien à une installation en service.
   const peutCreneaux = !capacites || capacites.includes("creneaux");
+  // Deux conditions distinctes : le compte a-t-il le droit d'organiser des
+  // créneaux, et CETTE séance en comporte-t-elle. La première vient de PADOC,
+  // la seconde du genre choisi à la création.
+  const seanceAvecCreneaux = avecCreneaux(editCfg);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [skipSlotCreation, setSkipSlotCreation] = useState(false);
   const [selectedSlotDates, setSelectedSlotDates] = useState<Set<string>>(() => new Set());
@@ -209,7 +214,10 @@ export const AdminView = ({
   }, [sessions]);
 
   const pendingSlotDates = useMemo(() => {
-    if (!editCfg || skipSlotCreation) return [];
+    // Le genre d'abord : des dates ont pu être choisies avant que la séance ne
+    // bascule en dégustation, et les créneaux seraient alors créés malgré la
+    // carte disparue de l'écran.
+    if (!editCfg || !avecCreneaux(editCfg) || skipSlotCreation) return [];
     return Array.from(selectedSlotDates).sort();
   }, [editCfg, selectedSlotDates, skipSlotCreation]);
 
@@ -538,10 +546,42 @@ export const AdminView = ({
                       }}
                     />
                   </div>
+
+                  {/* Le genre commande le reste du formulaire : il se choisit
+                      donc avant tout le reste, et non enfoui plus bas. */}
+                  <div className="field-wrap full">
+                    <label>USAGE DE LA SÉANCE</label>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {GENRES.map(({ valeur, libelle, detail }) => {
+                        const actif = genreDe(editCfg) === valeur;
+                        return (
+                          <label
+                            key={valeur}
+                            className={`flex cursor-pointer flex-col gap-1 rounded-lg border px-3 py-2.5 transition-colors ${
+                              actif
+                                ? "border-[var(--primary)] bg-[rgba(98,141,23,.06)]"
+                                : "border-[var(--border)] bg-[var(--paper2)] hover:border-[var(--border-strong)]"
+                            }`}
+                          >
+                            <span className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)]">
+                              <input
+                                type="radio"
+                                name="genre-seance"
+                                checked={actif}
+                                onChange={() => onSetEditCfg(prev => prev ? { ...prev, genre: valeur } : prev)}
+                              />
+                              {libelle}
+                            </span>
+                            <span className="pl-6 text-xs leading-snug text-[var(--mid)]">{detail}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </Card>
 
-              {peutCreneaux && (
+              {peutCreneaux && seanceAvecCreneaux && (
                 <Card title="Créneau">
                   <div className="grid gap-3 p-[15px]">
                     <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--paper2)] px-3 py-2 text-sm font-semibold">

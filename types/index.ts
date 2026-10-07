@@ -51,6 +51,22 @@ export interface Product {
   label?: string;
 }
 
+/**
+ * À quel usage la séance est destinée.
+ *
+ * - `panel` : l'usage IFPC — créneaux, inscriptions, invitations.
+ * - `degustation` : l'usage producteur — pas de créneaux, entrée par QR code.
+ *
+ * Le genre appartient à la SÉANCE et non au compte : le même animateur IFPC
+ * organise les deux, et une capacité attachée à son compte vaudrait pour
+ * toutes ses séances à la fois.
+ *
+ * Il ne peut pas non plus se déduire de l'existence de créneaux : à la
+ * création, aucun n'existe encore, et c'est précisément à ce moment qu'il faut
+ * décider quoi afficher.
+ */
+export type GenreSeance = "panel" | "degustation";
+
 export interface SessionConfig {
   name: string;
   date: string;
@@ -59,6 +75,8 @@ export interface SessionConfig {
   products: Product[];
   questions: Question[];
   presMode: "fixed" | "latin" | "random";
+  /** Absent sur les séances antérieures : elles sont des `panel`. */
+  genre?: GenreSeance;
 }
 
 export interface SessionListItem {
