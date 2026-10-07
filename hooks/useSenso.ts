@@ -421,6 +421,27 @@ export const useSenso = () => {
     setScreen("jury");
   }, [loadSessionData, loadSessions]);
 
+  /**
+   * Entrer dans une dégustation ouverte par un QR code.
+   *
+   * `handleSelectSession` ne convient pas ici : il cherche d'abord la séance
+   * dans le catalogue public, dont les dégustations sont justement absentes —
+   * elles ne se parcourent pas, elles se rejoignent par leur adresse. Il
+   * refuserait donc l'entrée à celui qui vient de scanner.
+   *
+   * La configuration est chargée directement. Le serveur fait la vérification
+   * qui compte : il n'accepte la requête que si le cookie déposé par le QR
+   * code correspond bien à cette séance.
+   */
+  const rejoindreSeanceEpinglee = useCallback(async (id: string) => {
+    const cfg = await loadSessionData(id);
+    if (!cfg) return false;
+    setCurSessId(id);
+    setMode("participant");
+    setScreen("jury");
+    return true;
+  }, [loadSessionData]);
+
   const buildSteps = useCallback((cfg: SessionConfig, jurorName: string, jurorList?: string[], posteOverride?: Poste | null) => {
     const jl = jurorList || stateRef.current.jurors;
     const effectivePoste = (posteOverride !== undefined) ? posteOverride : stateRef.current.poste;
@@ -888,7 +909,7 @@ export const useSenso = () => {
     setEditCfg, setEditSessId, setCurEditTab,
     setAnSessId, setCurAnT, setAdminSection,
     loadSessionConfig, loadSessions,
-    handleSelectSession, handleLoginJury, handleSelectPoste,
+    handleSelectSession, rejoindreSeanceEpinglee, handleLoginJury, handleSelectPoste,
     handleSetJa, requestHelp, handleAnSessChange,
     saveSession, deleteSession, deleteJury,
     listJurorsForSession, toggleResultsVisible,
@@ -898,7 +919,7 @@ export const useSenso = () => {
     // d'être listés en deps.
   }), [
     loadSessionConfig, loadSessions,
-    handleSelectSession, handleLoginJury, handleSelectPoste,
+    handleSelectSession, rejoindreSeanceEpinglee, handleLoginJury, handleSelectPoste,
     handleSetJa, requestHelp, handleAnSessChange,
     saveSession, deleteSession, deleteJury,
     listJurorsForSession, toggleResultsVisible,

@@ -79,6 +79,7 @@ export default function CiderScope() {
     anSessId, anCfg, curAnT, setCurAnT,
     adminSection, setAdminSection,
     handleAnSessChange,
+    rejoindreSeanceEpinglee,
     allAnswers,
     saveSession,
     deleteSession,
@@ -108,6 +109,25 @@ export default function CiderScope() {
     setMode(session.isAdmin ? "admin" : "participant");
     setScreen("landing");
   }, [chargementSession, session, mode, setMode, setScreen]);
+
+  // Entrée par QR code : /s/<jeton> a déposé un cookie, le serveur dit à
+  // quelle séance il donne accès, et l'on y va sans passer par l'écran de
+  // choix. Le dégustateur n'a rien à sélectionner — il a déjà scanné.
+  // Un ref et non un état : ce drapeau ne doit rien réafficher, il empêche
+  // seulement de redemander la séance épinglée à chaque rendu.
+  const seanceEpingleeTentee = useRef(false);
+  useEffect(() => {
+    if (seanceEpingleeTentee.current || !restored || mode !== "home") return;
+    seanceEpingleeTentee.current = true;
+    let vivant = true;
+    fetch("/api/public/seance-courante", { cache: "no-store" })
+      .then(r => (r.ok ? r.json() : { sessionId: null }))
+      .then((d: { sessionId?: string | null }) => {
+        if (vivant && d.sessionId) void rejoindreSeanceEpinglee(d.sessionId);
+      })
+      .catch(() => undefined);
+    return () => { vivant = false; };
+  }, [restored, mode, rejoindreSeanceEpinglee]);
 
   const currentNavigation: NavigationPoint = { mode, screen, adminSection };
 

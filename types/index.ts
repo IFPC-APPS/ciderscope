@@ -85,6 +85,8 @@ export interface SessionListItem {
   date: string;
   active: boolean;
   hasSlotSchedule?: boolean;
+  /** Renseigné par la route d'administration ; absent côté public. */
+  genre?: GenreSeance;
   slotDate?: string | null;
   slotDates?: string[];
   jurorCount: number;

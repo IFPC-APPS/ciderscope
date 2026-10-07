@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useMemo, useState, Dispatch, SetStateAction } from "react";
 import dynamic from "next/dynamic";
-import { FiChevronLeft, FiChevronRight, FiEdit2, FiCopy, FiX, FiCheck, FiArrowLeft, FiPlus, FiBarChart2, FiList, FiPieChart, FiCalendar } from "react-icons/fi";
+import { FiChevronLeft, FiChevronRight, FiEdit2, FiCopy, FiX, FiCheck, FiArrowLeft, FiPlus, FiBarChart2, FiList, FiPieChart, FiCalendar, FiGrid } from "react-icons/fi";
 import { Button } from "../../ui/Button";
 import { Card } from "../../ui/Card";
 import { Badge } from "../../ui/Badge";
@@ -18,6 +18,7 @@ import { SlotAdminView } from "./SlotAdminView";
 import { AdminHelpNotifications } from "./AdminHelpNotifications";
 import { SessionMergeCard } from "./SessionMergeCard";
 import { avecCreneaux, genreDe, GENRES } from "../../../lib/genreSeance";
+import { QrSeance } from "../../features/QrSeance";
 
 const adminShellClass = "mx-auto max-w-full overflow-x-clip px-[22px] py-7 pb-[60px] sm:max-w-[95%] supports-[not(overflow-x:clip)]:overflow-x-hidden";
 const sessionCardClass = "mb-2.5 flex max-w-full min-w-0 flex-wrap items-center gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--paper)] px-5 py-[18px] shadow-[var(--shadow)] transition-[box-shadow,border-color] duration-150 hover:border-[rgba(30,46,46,.18)] hover:shadow-[0_3px_16px_rgba(30,46,46,.09)]";
@@ -156,6 +157,7 @@ export const AdminView = ({
   // créneaux, et CETTE séance en comporte-t-elle. La première vient de PADOC,
   // la seconde du genre choisi à la création.
   const seanceAvecCreneaux = avecCreneaux(editCfg);
+  const [qrSeance, setQrSeance] = useState<{ id: string; nom: string } | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [skipSlotCreation, setSkipSlotCreation] = useState(false);
   const [selectedSlotDates, setSelectedSlotDates] = useState<Set<string>>(() => new Set());
@@ -386,6 +388,14 @@ export const AdminView = ({
           />
         )}
 
+        {qrSeance && (
+          <QrSeance
+            sessionId={qrSeance.id}
+            nomSeance={qrSeance.nom}
+            onFermer={() => setQrSeance(null)}
+          />
+        )}
+
         {adminSection === "creneaux" && peutCreneaux && (
           <SlotAdminView sessions={sessions} />
         )}
@@ -452,6 +462,17 @@ export const AdminView = ({
                       >
                         <FiBarChart2 />
                       </Button>
+                      {s.genre === "degustation" && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setQrSeance({ id: s.id, nom: s.name })}
+                          title="QR code d'entrée"
+                          aria-label="Afficher le QR code d'entrée de la séance"
+                        >
+                          <FiGrid />
+                        </Button>
+                      )}
                       <Button variant="secondary" size="sm" onClick={() => onEditSession(s.id)} title="Modifier" aria-label="Modifier la séance"><FiEdit2 /></Button>
                       <Button variant="ghost" size="sm" onClick={() => onDuplicateSession(s.id)} title="Dupliquer" aria-label="Dupliquer la séance"><FiCopy /></Button>
                       {confirmingId === s.id ? (

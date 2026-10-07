@@ -6,6 +6,7 @@ import { parseIsoDate } from "../../../../lib/slots/dates";
 import { validateSession } from "../../../../lib/validation";
 import type { SessionConfig, SessionListItem } from "../../../../types";
 import { listSessionCatalog } from "../../../../lib/server/sessionStore";
+import { idsDesDegustations } from "../../../../lib/server/seanceGenre";
 
 export const runtime = "nodejs";
 
@@ -28,7 +29,20 @@ export async function GET() {
   const unauthorized = await requireAdmin();
   if (unauthorized) return unauthorized;
   try {
-    return NextResponse.json({ sessions: await listSessionCatalog() });
+    // Le catalogue vient d'une procédure stockée qui ne remonte pas le genre.
+    // Plutôt que de la modifier — et d'avoir à la déployer sur chaque base —
+    // on l'ajoute ici : l'écran a besoin de savoir quelles séances se
+    // rejoignent par QR code.
+    const [sessions, degustations] = await Promise.all([
+      listSessionCatalog(),
+      idsDesDegustations(),
+    ]);
+    return NextResponse.json({
+      sessions: sessions.map(s => ({
+        ...s,
+        genre: degustations.has(s.id) ? ("degustation" as const) : ("panel" as const),
+      })),
+    });
   } catch (error) {
     console.error("Admin session catalog error:", error);
     return NextResponse.json({ error: "Impossible de charger les séances." }, { status: 500 });

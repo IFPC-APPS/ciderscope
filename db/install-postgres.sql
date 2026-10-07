@@ -176,7 +176,15 @@ CREATE TABLE ciderscope.sessions (
     results_visible boolean DEFAULT false,
     created_at timestamp with time zone DEFAULT now(),
     revision bigint DEFAULT 0 NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    -- Jeton d'entrée d'une dégustation producteur : le QR code imprimé le
+    -- porte, et il désigne seul la séance — l'identifiant n'apparaît jamais
+    -- dans l'adresse. Aucune connexion n'étant demandée au dégustateur, c'est
+    -- l'unique chose qui sépare le public de la séance.
+    --
+    -- Nul sur les séances antérieures et sur les panels IFPC : il est créé à
+    -- la volée le jour où quelqu'un l'affiche.
+    join_token text
 );
 CREATE TABLE ciderscope.slot_registration_rate_limits (
     rate_date date NOT NULL,
@@ -225,6 +233,9 @@ ALTER TABLE ONLY ciderscope.slot_registration_rate_limits
 ALTER TABLE ONLY ciderscope.slot_registrations
     ADD CONSTRAINT slot_registrations_pkey PRIMARY KEY (id);
 CREATE UNIQUE INDEX answers_access_token_hash_key ON ciderscope.answers USING btree (access_token_hash) WHERE (access_token_hash IS NOT NULL);
+-- Unique : deux séances ne peuvent pas partager un jeton. Partiel, car la
+-- plupart des séances n'en ont pas et NULL ne doit pas entrer en conflit.
+CREATE UNIQUE INDEX sessions_join_token_idx ON ciderscope.sessions USING btree (join_token) WHERE (join_token IS NOT NULL);
 CREATE INDEX answers_juror_subject_idx ON ciderscope.answers USING btree (juror_subject) WHERE (juror_subject IS NOT NULL);
 CREATE UNIQUE INDEX email_domain_whitelist_domain_key ON ciderscope.email_domain_whitelist USING btree (domain);
 CREATE UNIQUE INDEX session_slots_one_open_slot_per_day ON ciderscope.session_slots USING btree (slot_date) WHERE (deleted_at IS NULL);
