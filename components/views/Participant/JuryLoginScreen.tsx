@@ -69,7 +69,7 @@ export const JuryLoginScreen = ({ curSess, onLoginJury, onGoBack }: JuryLoginScr
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && submit()}
         autoFocus
-        className="mb-4 min-h-[42px] w-full rounded-[var(--radius)] border-[1.5px] border-[var(--border)] bg-[var(--paper)] p-[17px] text-center text-[19px] font-semibold text-[var(--ink)] outline-none transition-colors focus:border-[var(--accent)]"
+        className="mb-4 min-h-[52px] w-full rounded-xl border border-[var(--border)] bg-[var(--paper)] p-4 text-center text-[19px] font-semibold text-[var(--ink)] outline-none transition-[border-color,box-shadow] focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--ring)]"
       />
       <Button onClick={submit}>
         Commencer <FiArrowRight />

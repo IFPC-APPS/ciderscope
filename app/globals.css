@@ -5,10 +5,10 @@
 @theme{--font-sans:'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;--font-mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace}
 @layer base{
 /* 2. Tokens */
-:root{--primary:#628d17;--primary-2:#537813;--accent:#ee8c00;--accent2:#d47f00;--highlight:#eaf066;--lime:rgba(234,240,102,.35);--sand:#e7c275;--link:#67a5db;--ink:#2a2a2a;--ink2:#1a1a1a;--paper:#ffffff;--paper2:#f6f8f9;--paper3:#eef1f3;--bg:#f6f8f9;--mid:#6B7280;--mid2:#9CA3AF;--text-muted:#6B7280;--ok:#628d17;--warn:#ee8c00;--danger:#C62828;--border:rgba(0, 0, 0, 0.06);--border-strong:rgba(0, 0, 0, 0.12);--radius:10px;--radius-lg:14px;--radius-xl:18px;--shadow:0 1px 3px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.03);--shadow-md:0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.04);--font-mono-stack:'JetBrains Mono', ui-monospace, monospace;--accent-tint:#fdf5e6;--topbar-bg:rgba(255,255,255,.95);--product-nav-bg:rgba(245,243,238,.95);--t-scale:#67a5db;--t-classement:#628d17;--t-seuil:#eaf066;--t-text:#8a7e90;--t-qcm:#2472a0;--t-triangulaire:#ee8c00;--t-duotrio:#7b4aaa;--t-anona:#C62828;--chart-grid:rgba(0, 0, 0, .08);--chart-axis:#6B7280}
+:root{--primary:#628d17;--primary-2:#537813;--accent:#ee8c00;--accent2:#d47f00;--highlight:#eaf066;--lime:rgba(234,240,102,.35);--sand:#e7c275;--link:#67a5db;--ink:#2a2a2a;--ink2:#1a1a1a;--paper:#ffffff;--paper2:#f6f8f9;--paper3:#eef1f3;--bg:#f6f8f9;--mid:#6B7280;--mid2:#9CA3AF;--text-muted:#6B7280;--ok:#628d17;--warn:#ee8c00;--danger:#C62828;--border:#e5e7eb;--border-strong:#d1d5db;--ring:rgba(98,141,23,.12);--ring-line:#628d17;--radius:10px;--radius-lg:14px;--radius-xl:18px;--shadow:0 1px 3px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.03);--shadow-md:0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -2px rgba(0,0,0,.04);--font-mono-stack:'JetBrains Mono', ui-monospace, monospace;--accent-tint:#fdf5e6;--topbar-bg:rgba(255,255,255,.95);--product-nav-bg:rgba(245,243,238,.95);--t-scale:#67a5db;--t-classement:#628d17;--t-seuil:#eaf066;--t-text:#8a7e90;--t-qcm:#2472a0;--t-triangulaire:#ee8c00;--t-duotrio:#7b4aaa;--t-anona:#C62828;--chart-grid:rgba(0, 0, 0, .08);--chart-axis:#6B7280}
 /* 3. Dark mode */
 @media (prefers-color-scheme: dark){
-  :root{--primary:#86b53b;--primary-2:#6f9b2c;--accent:#ffcc33;--accent2:#e08e1e;--highlight:#cdd24c;--lime:rgba(205,210,76,.28);--sand:#d8b06a;--link:#8fb9e3;--ink:#e6e6e6;--ink2:#f4f4f4;--paper:#1c1f21;--paper2:#141618;--paper3:#262a2d;--bg:#141618;--mid:#9aa3ae;--mid2:#6b7480;--text-muted:#9aa3ae;--ok:#86b53b;--warn:#ffcc33;--danger:#e57373;--border:rgba(255, 255, 255, 0.10);--border-strong:rgba(255, 255, 255, 0.20);--shadow:0 1px 3px rgba(0,0,0,.5),  0 1px 2px rgba(0,0,0,.4);--shadow-md:0 4px 10px rgba(0,0,0,.55), 0 2px 4px rgba(0,0,0,.4);--t-scale:#8fb9e3;--t-classement:#86b53b;--t-seuil:#d6da6a;--t-text:#ada3b3;--t-qcm:#4f95c0;--t-triangulaire:#ffa838;--t-duotrio:#a079c8;--t-anona:#e57373;--chart-grid:rgba(255, 255, 255, .12);--chart-axis:#9aa3ae;--topbar-bg:rgba(20, 22, 24, .85);--product-nav-bg:rgba(20, 22, 24, .85)}
+  :root{--primary:#86b53b;--primary-2:#6f9b2c;--accent:#ffcc33;--accent2:#e08e1e;--highlight:#cdd24c;--lime:rgba(205,210,76,.28);--sand:#d8b06a;--link:#8fb9e3;--ink:#e6e6e6;--ink2:#f4f4f4;--paper:#1c1f21;--paper2:#141618;--paper3:#262a2d;--bg:#141618;--mid:#9aa3ae;--mid2:#6b7480;--text-muted:#9aa3ae;--ok:#86b53b;--warn:#ffcc33;--danger:#e57373;--border:rgba(255, 255, 255, 0.14);--border-strong:rgba(255, 255, 255, 0.26);--ring:rgba(134,181,59,.18);--ring-line:#86b53b;--shadow:0 1px 3px rgba(0,0,0,.5),  0 1px 2px rgba(0,0,0,.4);--shadow-md:0 4px 10px rgba(0,0,0,.55), 0 2px 4px rgba(0,0,0,.4);--t-scale:#8fb9e3;--t-classement:#86b53b;--t-seuil:#d6da6a;--t-text:#ada3b3;--t-qcm:#4f95c0;--t-triangulaire:#ffa838;--t-duotrio:#a079c8;--t-anona:#e57373;--chart-grid:rgba(255, 255, 255, .12);--chart-axis:#9aa3ae;--topbar-bg:rgba(20, 22, 24, .85);--product-nav-bg:rgba(20, 22, 24, .85)}
   html{color-scheme:dark}
 }
 /* 4. Base */
@@ -24,6 +24,12 @@ h1, h2, h3, h4, h5, h6{font-family:inherit;font-weight:700;letter-spacing:-0.01e
 a{color:var(--link);text-decoration:none}
 a:hover{text-decoration:underline}
 button, [role="button"]{touch-action:manipulation}
+/* Un anneau de focus net, repris de PADOC : les deux applications se
+   parcourent au clavier de la même façon, et l'élément actif ne se devine plus
+   à une nuance de bordure. */
+:where(a,button,[role="button"],input,select,textarea,summary,[tabindex]):focus-visible{
+  outline:2px solid var(--ring-line);outline-offset:2px;border-radius:var(--radius)
+}
 }
 @keyframes slideUp{
   from{opacity:0;transform:translateY(8px)}
@@ -39,8 +45,14 @@ button, [role="button"]{touch-action:manipulation}
   @page{size:A4;margin:14mm}
   body{background:#fff!important;color:#111!important}
   body *{visibility:hidden!important}
-  .print-sheet,.print-sheet *{visibility:visible!important}
+  /* .feuille-imprimable : tout bloc conçu pour être imprimé tel quel, sans
+     la mise en page d'une feuille de dégustation. Sans cette seconde
+     famille, un panneau d'impression ajouté ailleurs sort en page blanche —
+     la règle ci-dessus masque absolument tout le reste. */
+  .print-sheet,.print-sheet *,
+  .feuille-imprimable,.feuille-imprimable *{visibility:visible!important}
   .print-sheet{display:block!important;position:absolute;inset:0;width:100%;padding:0;font-family:Inter,Arial,sans-serif}
+  .feuille-imprimable{position:absolute!important;inset:0;width:100%;border:0!important;box-shadow:none!important}
   .print-sheet h1{margin:0 0 16px;font-size:24px;line-height:1.2}
   .print-sheet .print-meta{display:grid;gap:6px;margin-bottom:18px;font-size:13px}
   .print-sheet table{width:100%;border-collapse:collapse;font-size:13px}

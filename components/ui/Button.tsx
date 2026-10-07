@@ -7,7 +7,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = ({ variant = 'primary', size = 'md', className = '', children, ...props }: ButtonProps) => {
-  const baseClass = 'inline-flex cursor-pointer items-center gap-[7px] rounded-[var(--radius)] border border-transparent font-semibold leading-none transition-[background,border-color,box-shadow,transform] duration-150 disabled:cursor-not-allowed disabled:opacity-40';
+  const baseClass = 'inline-flex cursor-pointer items-center gap-[7px] rounded-[var(--radius)] border border-transparent font-semibold leading-none transition-[background,border-color,box-shadow,transform] duration-150 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring-line)]';
   const sizeClass = size === 'sm'
     ? 'min-h-[34px] rounded-lg px-3 py-[7px] text-[12.5px] max-[480px]:min-h-[34px] max-[480px]:text-xs'
     : 'min-h-[42px] px-[18px] py-2.5 text-sm max-[480px]:px-4 max-[480px]:text-[13px]';

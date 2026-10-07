@@ -57,7 +57,11 @@ export const QrSeance = ({ sessionId, nomSeance, onFermer }: QrSeanceProps) => {
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4 print:static print:bg-transparent print:p-0">
-      <div className="w-full max-w-[480px] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--paper)] p-6 shadow-[var(--shadow)] print:max-w-none print:border-0 print:shadow-none">
+      {/* « feuille-imprimable » n'est pas décoratif : la feuille de style
+          masque absolument tout à l'impression, sauf les blocs portant cette
+          classe ou .print-sheet. Sans elle, « Imprimer » sortait une page
+          blanche — et rien à l'écran ne l'aurait laissé deviner. */}
+      <div className="feuille-imprimable w-full max-w-[480px] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--paper)] p-6 shadow-[var(--shadow)] print:max-w-none print:border-0 print:shadow-none">
         <div className="mb-5 flex items-start justify-between gap-4 print:mb-8">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wider text-[var(--mid)]">Dégustation</p>
