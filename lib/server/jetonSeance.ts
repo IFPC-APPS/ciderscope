@@ -42,6 +42,33 @@ export const jetonValide = (jeton: unknown): jeton is string =>
   && [...jeton].every((c) => ALPHABET.includes(c));
 
 /**
+ * La colonne `join_token` manque-t-elle encore ?
+ *
+ * Le compte applicatif n'a pas le droit de modifier le schéma — à dessein — et
+ * aucun migrateur ne tourne au démarrage. La migration est donc un geste
+ * manuel, et tant qu'il n'a pas été fait, PostgreSQL répond `42703`
+ * (colonne inconnue). Sans ce repérage, l'écran afficherait « impossible de
+ * lire le jeton » : exact, et parfaitement inutile.
+ */
+export class MigrationManquante extends Error {
+  constructor() {
+    super("La colonne « join_token » n'existe pas encore : appliquer db/migrations/001-jeton-seance.sql.");
+    this.name = "MigrationManquante";
+  }
+}
+
+const colonneAbsente = (erreur: unknown): boolean => {
+  const e = erreur as { code?: string; message?: string };
+  return e?.code === "42703"
+    || (typeof e?.message === "string" && /join_token/.test(e.message) && /column|colonne/i.test(e.message));
+};
+
+export const traduireErreur = (erreur: unknown): never => {
+  if (colonneAbsente(erreur)) throw new MigrationManquante();
+  throw erreur;
+};
+
+/**
  * L'identifiant de la séance que ce jeton ouvre, ou null.
  *
  * La forme est vérifiée avant d'interroger la base : un jeton mal formé est
@@ -62,11 +89,15 @@ export const seanceDuJeton = async (jeton: string): Promise<string | null> => {
     return (data as { id: string } | null)?.id ?? null;
   }
 
-  const { rows } = await getSessionSqlPool().query<{ id: string }>(
-    "select id from sessions where join_token = $1",
-    [jeton],
-  );
-  return rows[0]?.id ?? null;
+  try {
+    const { rows } = await getSessionSqlPool().query<{ id: string }>(
+      "select id from sessions where join_token = $1",
+      [jeton],
+    );
+    return rows[0]?.id ?? null;
+  } catch (erreur) {
+    return traduireErreur(erreur);
+  }
 };
 
 /** Le jeton d'une séance, s'il en a un. */
@@ -82,11 +113,15 @@ export const jetonDeLaSeance = async (sessionId: string): Promise<string | null>
     return (data as { join_token: string | null } | null)?.join_token ?? null;
   }
 
-  const { rows } = await getSessionSqlPool().query<{ join_token: string | null }>(
-    "select join_token from sessions where id = $1",
-    [sessionId],
-  );
-  return rows[0]?.join_token ?? null;
+  try {
+    const { rows } = await getSessionSqlPool().query<{ join_token: string | null }>(
+      "select join_token from sessions where id = $1",
+      [sessionId],
+    );
+    return rows[0]?.join_token ?? null;
+  } catch (erreur) {
+    return traduireErreur(erreur);
+  }
 };
 
 const ecrireJeton = async (sessionId: string, jeton: string): Promise<void> => {
@@ -99,10 +134,14 @@ const ecrireJeton = async (sessionId: string, jeton: string): Promise<void> => {
     if (error) throw error;
     return;
   }
-  await getSessionSqlPool().query(
-    "update sessions set join_token = $2 where id = $1",
-    [sessionId, jeton],
-  );
+  try {
+    await getSessionSqlPool().query(
+      "update sessions set join_token = $2 where id = $1",
+      [sessionId, jeton],
+    );
+  } catch (erreur) {
+    traduireErreur(erreur);
+  }
 };
 
 /**

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireAdmin } from "../../../../../../lib/server/adminAuth";
-import { assurerJeton, regenererJeton } from "../../../../../../lib/server/jetonSeance";
+import { assurerJeton, MigrationManquante, regenererJeton } from "../../../../../../lib/server/jetonSeance";
 import { getSessionDetails } from "../../../../../../lib/server/sessionStore";
 import { avecLienDirect } from "../../../../../../lib/genreSeance";
 import type { SessionConfig } from "../../../../../../types";
@@ -47,6 +47,9 @@ export async function GET(
     if (refus) return refus;
     return NextResponse.json({ jeton: await assurerJeton(sessionId) });
   } catch (error) {
+    if (error instanceof MigrationManquante) {
+      return NextResponse.json({ error: error.message }, { status: 503 });
+    }
     console.error("Jeton de séance — lecture:", error);
     return NextResponse.json({ error: "Impossible de lire le jeton." }, { status: 500 });
   }
@@ -64,6 +67,9 @@ export async function POST(
     if (refus) return refus;
     return NextResponse.json({ jeton: await regenererJeton(sessionId) });
   } catch (error) {
+    if (error instanceof MigrationManquante) {
+      return NextResponse.json({ error: error.message }, { status: 503 });
+    }
     console.error("Jeton de séance — régénération:", error);
     return NextResponse.json({ error: "Impossible de régénérer le jeton." }, { status: 500 });
   }
