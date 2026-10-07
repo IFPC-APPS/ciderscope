@@ -60,22 +60,17 @@ export const Topbar = ({
       </span>
     )}
 
-    <span
-      className={`hidden items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] font-medium md:inline-flex ${
-        online
-          ? "border-[rgba(98,141,23,.18)] bg-[rgba(98,141,23,.07)] text-[var(--primary)]"
-          : "border-[rgba(198,40,40,.18)] bg-[rgba(198,40,40,.06)] text-[var(--danger)]"
-      }`}
-      // « En ligne », et non « Connecté » : cette pastille dit que le serveur
-      // répond, pas qu'un compte est ouvert. Le mot plutôt que la seule
-      // couleur, aussi : l'état doit se lire sans distinguer vert et rouge.
-    >
-      <span
-        className={`h-1.5 w-1.5 rounded-full ${online ? "animate-pulse bg-[var(--primary)]" : "bg-[var(--danger)]"}`}
-        aria-hidden="true"
-      />
-      {online ? "En ligne" : "Hors ligne"}
-    </span>
+    {/* Rien ne s'affiche quand tout va bien. Une pastille permanente « En
+        ligne » n'apprend rien, occupe le bandeau, et se confondait avec l'état
+        du compte. Seule l'anomalie mérite d'être signalée : hors ligne, les
+        réponses partent dans une file locale, et le dégustateur doit le
+        savoir. */}
+    {!online && (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(198,40,40,.18)] bg-[rgba(198,40,40,.06)] px-2.5 py-1 font-mono text-[11px] font-medium text-[var(--danger)]">
+        <span className="h-1.5 w-1.5 rounded-full bg-[var(--danger)]" aria-hidden="true" />
+        Hors ligne
+      </span>
+    )}
 
     <div className="flex gap-px sm:gap-1">
       {administrateur && (

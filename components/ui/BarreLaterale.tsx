@@ -120,16 +120,15 @@ export const BarreLaterale = ({
         </nav>
 
         <div className="shrink-0 border-t border-[var(--border)] px-2 py-3">
-          {/* « En ligne », et non « Connecté » : cette pastille dit que le
-              serveur répond, pas qu'un compte est ouvert. Avec « Connecté »,
-              un visiteur sans compte croyait l'être — d'autant plus depuis
-              qu'il existe une vraie connexion par compte. */}
-          <p className={`mb-2 flex items-center gap-1.5 font-mono text-[11px] ${compact ? "justify-center" : "px-1"} ${
-            online ? "text-[var(--mid)]" : "text-[var(--danger)]"
-          }`}>
-            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${online ? "bg-[var(--primary)]" : "bg-[var(--danger)]"}`} aria-hidden="true" />
-            {!compact && (online ? "En ligne" : "Hors ligne")}
-          </p>
+          {/* Rien quand tout va bien : seule l'anomalie mérite une place. Hors
+              ligne, les réponses partent dans une file locale — c'est cela
+              qu'il faut dire, pas l'inverse. */}
+          {!online && (
+            <p className={`mb-2 flex items-center gap-1.5 font-mono text-[11px] text-[var(--danger)] ${compact ? "justify-center" : "px-1"}`}>
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--danger)]" aria-hidden="true" />
+              {!compact && "Hors ligne"}
+            </p>
+          )}
 
           {nomUtilisateur ? (
             <>
