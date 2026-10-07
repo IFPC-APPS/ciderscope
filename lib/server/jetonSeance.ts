@@ -52,7 +52,7 @@ export const jetonValide = (jeton: unknown): jeton is string =>
  */
 export class MigrationManquante extends Error {
   constructor() {
-    super("La colonne « join_token » n'existe pas encore : appliquer db/migrations/001-jeton-seance.sql.");
+    super("La colonne « join_token » n'existe pas encore : appliquer supabase/migrations/202610071200_session_join_token.sql.");
     this.name = "MigrationManquante";
   }
 }
