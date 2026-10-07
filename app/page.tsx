@@ -130,7 +130,12 @@ export default function CiderScope() {
     if (chargementSession) {
       return <div className="p-8 text-center text-[var(--mid)]">Chargement…</div>;
     }
-    return <HomeScreen padocDisponible={session?.padocAvailable !== false} />;
+    return (
+      <HomeScreen
+        padocDisponible={session?.padocAvailable !== false}
+        onRejoindre={() => { setMode("participant"); setScreen("landing"); }}
+      />
+    );
   }
 
   if (mode === "participant") {

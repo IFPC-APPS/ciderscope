@@ -101,11 +101,28 @@ une liste ; demain il arrive directement dedans.
 4. **Le parcours participant** : arriver par l'adresse saute l'écran de choix
    et mène directement à l'identification du dégustateur.
 
-**À trancher :** que voit-on si la séance est close, ou si le jeton a été
-régénéré ? Un message clair, pas une page vide.
+**Décidé avec le client :**
+
+- **Aucune connexion n'est demandée au dégustateur**, et il n'est pas
+  nécessairement un utilisateur de PADOC. L'adresse EST le droit d'entrée.
+  C'est ce qui rend le jeton obligatoire et non facultatif : il n'y a rien
+  d'autre entre le public et la dégustation.
+- **Une séance peut être rejouée.** Le jeton ne doit donc pas être à usage
+  unique ni expirer à la clôture : la même feuille imprimée doit resservir.
+  Il reste régénérable à la demande, pour le cas où une adresse aurait fuité.
+- **Le serveur refuse**, et pas seulement l'interface : un jeton absent ou
+  faux fait répondre une erreur, quelle que soit la page affichée.
+
+**Conséquence sur l'écran d'entrée.** Une version intermédiaire de cet écran
+faisait de la connexion IFPC la seule porte : un dégustateur arrivé sur la
+racine — QR mal scanné, retour en arrière, adresse tapée de mémoire — se
+retrouvait devant un formulaire qui ne le concernait pas, sans recours.
+L'action principale y est donc « Rejoindre une dégustation », sans compte, et
+la connexion par compte est devenue le lien discret des animateurs.
 
 **Difficulté :** moyenne. **Risque :** le jeton. Sans lui, la fonctionnalité
-est une faille.
+est une faille — et elle l'est d'autant plus qu'aucune connexion ne la
+protège par ailleurs.
 
 ---
 
@@ -134,11 +151,15 @@ et, à côté, le descriptif. C'est là qu'elle se place.
 - **Plafonner la taille côté serveur et refuser proprement.** Un téléversement
   qui échoue sans message est le plus sûr moyen de faire renoncer quelqu'un.
 
-**À trancher :** la photo apparaît-elle aussi dans le résumé que le
-**participant** consulte à la fin, ou seulement dans celui de l'animateur ? La
-demande décrit le parcours administrateur, mais la lecture la plus utile est
-que le participant la voie : c'est le moment où on lui révèle ce qu'il a
-dégusté.
+**Décidé avec le client : la photo est montrée aux participants, à la fin de
+la séance.** C'est le moment où on leur révèle ce qu'ils ont dégusté, et c'est
+là qu'une image a le plus de valeur. Elle apparaît donc dans le résumé que le
+participant consulte depuis `DoneScreen`, et pas seulement dans celui de
+l'animateur.
+
+Cela déplace une contrainte : l'image est servie à tout le panel en même
+temps, en fin de séance, souvent sur le réseau d'un chai. La réduction avant
+envoi n'est plus un confort, c'est ce qui décide si le résumé s'affiche.
 
 **Difficulté :** moyenne. **Risque :** le stockage, si on choisit mal.
 
@@ -179,13 +200,18 @@ cloisonnement pour ses cuves et ses lots, la démarche y est éprouvée.
 
 ---
 
-## 9. À trancher avant de commencer
+## 9. Décisions prises
 
-1. La photo est-elle montrée au participant, ou seulement à l'animateur ?
-2. Le QR code doit-il être imprimable par séance seulement, ou aussi par poste
+| Question | Réponse |
+|---|---|
+| La photo est-elle vue par le participant ? | **Oui**, à la fin de la séance |
+| Le QR code demande-t-il une connexion ? | **Non.** Ni compte, ni appartenance à PADOC — l'adresse est le droit d'entrée |
+| Une séance est-elle rejouable ? | **Oui.** Le jeton survit à la clôture et la feuille imprimée resert |
+| Les créneaux doivent-ils être refusés côté serveur ? | **Oui**, et pas seulement masqués dans l'interface |
+
+### Ce qui reste ouvert
+
+1. Le QR code doit-il être imprimable par séance seulement, ou aussi par poste
    de dégustation ?
-3. Une dégustation producteur a-t-elle vocation à être rejouée, ou est-elle
-   close après son usage ? Cela décide du sort du jeton d'entrée.
-4. Les routes de créneaux doivent-elles aussi refuser l'accès pour une séance
-   `degustation`, ou l'affichage suffit-il ? (Le refus serveur est la bonne
-   réponse ; autant la confirmer.)
+2. Faut-il un moyen de rejoindre sans scanner — un code court à saisir — pour
+   le dégustateur dont le téléphone ne lit pas les QR codes ?

@@ -1,10 +1,12 @@
 "use client";
 import React from "react";
-import { FiArrowRight, FiLock } from "react-icons/fi";
+import { FiArrowRight, FiUsers } from "react-icons/fi";
 
 interface HomeScreenProps {
   /** Le lien de connexion fédérée est-il utilisable ? */
   padocDisponible: boolean;
+  /** Entrer dans la passation sans compte, pour un dégustateur. */
+  onRejoindre: () => void;
 }
 
 /**
@@ -12,12 +14,18 @@ interface HomeScreenProps {
  *
  * Le choix « Participant ou Admin » a été retiré : il demandait à l'utilisateur
  * de déclarer ce qu'il est, alors que son compte le dit déjà. Un animateur
- * arrivait sur l'écran participant par simple inattention, et un panéliste se
- * voyait proposer une porte qui n'était pas la sienne.
+ * arrivait sur l'écran participant par simple inattention.
  *
- * Désormais la connexion décide, et il n'y a plus qu'une action possible.
+ * Mais la question posée ici n'est pas la même. Un dégustateur n'a pas de
+ * compte et n'en aura pas : il arrive par le QR code d'une séance, et rien ne
+ * lui sera jamais demandé. S'il atterrit malgré tout sur cette page — QR mal
+ * scanné, retour en arrière, adresse tapée de mémoire — il doit pouvoir
+ * entrer. Lui opposer un écran de connexion le laisserait dehors sans recours.
+ *
+ * L'action principale est donc la sienne. La connexion par compte, discrète,
+ * est celle des animateurs.
  */
-export const HomeScreen = ({ padocDisponible }: HomeScreenProps) => (
+export const HomeScreen = ({ padocDisponible, onRejoindre }: HomeScreenProps) => (
   <div className="mx-auto flex min-h-[calc(100vh-7rem)] max-w-[min(94%,560px)] flex-col items-center justify-center px-7 py-14 text-center max-[480px]:px-3.5 max-[480px]:py-6">
     <div className="mb-10">
       <h1 className="mb-3.5 text-[clamp(40px,6.5vw,68px)] font-extrabold leading-[1.02] text-[var(--ink)] max-[480px]:text-3xl">
@@ -28,34 +36,33 @@ export const HomeScreen = ({ padocDisponible }: HomeScreenProps) => (
       </p>
     </div>
 
-    {padocDisponible ? (
+    <button
+      type="button"
+      onClick={onRejoindre}
+      className="group inline-flex w-full items-center justify-center gap-3 rounded-[var(--radius)] bg-[var(--primary)] px-7 py-4 text-[15px] font-semibold text-white shadow-[var(--shadow)] transition-[background,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(30,46,46,.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[var(--primary)]"
+    >
+      <FiUsers size={18} />
+      Rejoindre une dégustation
+      <FiArrowRight
+        size={18}
+        className="transition-transform duration-200 group-hover:translate-x-[3px]"
+      />
+    </button>
+    <p className="mt-4 max-w-[42ch] text-[13px] leading-relaxed text-[var(--mid)]">
+      Aucun compte n&apos;est nécessaire. Le plus simple reste de scanner le QR
+      code affiché sur votre table.
+    </p>
+
+    {padocDisponible && (
       <>
+        <div className="my-8 h-px w-full max-w-[280px] bg-[var(--border)]" aria-hidden="true" />
         <a
           href="/api/auth/ifpc/login"
-          className="group inline-flex w-full items-center justify-center gap-3 rounded-[var(--radius)] bg-[var(--primary)] px-7 py-4 text-[15px] font-semibold text-white shadow-[var(--shadow)] transition-[background,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(30,46,46,.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[var(--primary)]"
+          className="text-[14px] font-semibold text-[var(--primary)] underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[var(--primary)]"
         >
-          Se connecter avec mon compte IFPC
-          <FiArrowRight
-            size={18}
-            className="transition-transform duration-200 group-hover:translate-x-[3px]"
-          />
+          Animateur&nbsp;: se connecter avec mon compte IFPC
         </a>
-        <p className="mt-5 max-w-[42ch] text-[13px] leading-relaxed text-[var(--mid)]">
-          Le même compte que sur PADOC. Votre mot de passe reste connu de l&apos;IFPC
-          seul&nbsp;: CiderScope ne le voit jamais.
-        </p>
       </>
-    ) : (
-      <div className="flex w-full flex-col items-center gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--paper)] px-7 py-8 shadow-[var(--shadow)]">
-        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--paper2)] text-[var(--mid)]">
-          <FiLock size={24} />
-        </span>
-        <p className="text-[15px] font-semibold text-[var(--ink)]">Connexion indisponible</p>
-        <p className="max-w-[40ch] text-[13px] leading-relaxed text-[var(--mid)]">
-          La connexion par compte IFPC n&apos;est pas configurée sur cette
-          installation. Contactez un administrateur.
-        </p>
-      </div>
     )}
   </div>
 );
